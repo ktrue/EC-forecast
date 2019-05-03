@@ -130,3 +130,7 @@ which would show:
 For this date:  
 Normals: Max 16°C Min 5°C
 ```
+
+# Sample of the output for lang=fr (French):
+
+<img src="./sample-french-output.png" alt="Sample Output" style="border: 1px black solid;">
