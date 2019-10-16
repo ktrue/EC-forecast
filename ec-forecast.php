@@ -40,8 +40,9 @@
 // Version 5.00 - 27-Sep-2017 - major redesign to use EC XML forecast data instead of website scraping
 // Version 5.01 - 07-Nov-2017 - added windchill display to conditions box
 // Version 5.02 - 20-Nov-2017 - added wind-gust display to conditions box and hourly display, fix no conds icon issue
+// Version 5.03 - 16-Oct-2019 - change XML access URL to https on EC site
 //
-  $Version = "V5.02 - 20-Nov-2017";
+  $Version = "V5.03 - 16-Oct-2019";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -108,8 +109,8 @@ $ECforecasts = array(
 'Calgary, AB|https://weather.gc.ca/city/pages/ab-52_metric_e.html',
 'Regina, SK|https://weather.gc.ca/city/pages/sk-32_metric_e.html',
 'Winnipeg, MB|https://weather.gc.ca/city/pages/mb-38_metric_e.html',
-'Ottawa (Kanata - Orléans), ON|https://weather.gc.ca/city/pages/on-118_metric_e.html',
-'Montréal, QC|https://weather.gc.ca/city/pages/qc-147_metric_e.html',
+'Ottawa (Kanata - Orlï¿½ans), ON|https://weather.gc.ca/city/pages/on-118_metric_e.html',
+'Montrï¿½al, QC|https://weather.gc.ca/city/pages/qc-147_metric_e.html',
 'Happy Valley-Goose Bay, NL|https://weather.gc.ca/city/pages/nl-23_metric_e.html',
 'St. John\'s, NL|https://weather.gc.ca/city/pages/nl-24_metric_e.html',
 'Fredericton, NB|https://weather.gc.ca/city/pages/nb-29_metric_e.html',
@@ -176,7 +177,7 @@ if (isset($SITE['ECshow24hour']))     {$show24hour = $SITE['ECshow24hour'];}    
 //
 // Also returned are these useful variables filled in:
 // $title = updated/issued text in language selected
-// $textfcsthead = 'Current Forecast' or 'Textes des prévisions'
+// $textfcsthead = 'Current Forecast' or 'Textes des prï¿½visions'
 //
 // $weather = fully formed html table with two rows of Icons and text 
 // $textforecast = fully formed <div> with text forecast as <dl>
@@ -271,8 +272,8 @@ $doDebug = (isset($_REQUEST['debug']) and strtolower($_REQUEST['debug']) == 'y')
 if ($Lang == 'fr') {
   $LMode = 'f';
   $ECNAME = "Environnement Canada";
-  $ECHEAD = 'Prévisions';
-  $abnormalString = '<p class="ECforecast"><strong>*</strong> - Indique une tendance inverse de la température.</p>' . "\n";
+  $ECHEAD = 'Prï¿½visions';
+  $abnormalString = '<p class="ECforecast"><strong>*</strong> - Indique une tendance inverse de la tempï¿½rature.</p>' . "\n";
 } else {
   $Lang = 'en';
   $LMode = 'e';
@@ -356,13 +357,13 @@ if(file_exists('ec-forecast-lookup.txt')) {
 
 $trantab = array(
   'ISO' =>
-	array('À','à','Â','â','Æ','æ',
-			 'Ç','ç',
-			 'É','é','È','è','Ê','ê','Ë','ë',
-			 'Î','î','Ï','ï',
-			 'Ô','ô','Œ','œ',
-			 'Ù','ù','Û','û','Ü','ü',
-			 'Ÿ','ÿ'),
+	array('ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½',
+			 'ï¿½','ï¿½',
+			 'ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½',
+			 'ï¿½','ï¿½','ï¿½','ï¿½',
+			 'ï¿½','ï¿½','ï¿½','ï¿½',
+			 'ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½',
+			 'ï¿½','ï¿½'),
 	// UTF-8 characters represented as ISO-8859-1
 	'UTF' =>
 	array('Ã€','Ã ','Ã‚','Ã¢','Ã†','Ã¦',
@@ -574,24 +575,24 @@ $LegendsLang = array(
   // French
   'citycondition' => 'Condition',
   'obsdate' => 'Date',
-  'cityobserved' => 'Enregistrées à',
-  'temperature' => 'Température',
+  'cityobserved' => 'Enregistrï¿½es ï¿½',
+  'temperature' => 'Tempï¿½rature',
   'pressure' => 'Pression',
   'tendency' => 'Tendance',
-  'humidity' => 'Humidité',
-  'windchill' => 'Refr.<br/>éolien',
-  'windchillabbr' => 'refroidissement éolien',
+  'humidity' => 'Humiditï¿½',
+  'windchill' => 'Refr.<br/>ï¿½olien',
+  'windchillabbr' => 'refroidissement ï¿½olien',
   'humidex' => 'Humidex',
-  'visibility' => 'Visibilité',
-  'dewpoint' => 'Point de rosée',
+  'visibility' => 'Visibilitï¿½',
+  'dewpoint' => 'Point de rosï¿½e',
   'wind' => 'Vent',
 	'calm' => 'calme',
 	'gust' => 'rafale',
-  'aqhi' => 'Cote air santé',
+  'aqhi' => 'Cote air santï¿½',
   'maxmin' => 'Normales',
   'maxtemp' => 'Max',
   'mintemp' => 'Min',
-  'precip' => 'Précipitation totale',
+  'precip' => 'Prï¿½cipitation totale',
   'precip' => 'Pluie',
   'snow' => 'Neige',
   'sunrise' => 'Lever',
@@ -599,33 +600,33 @@ $LegendsLang = array(
   'moonrise' => 'Lever de la lune',
   'moonset' => 'Coucher de la lune',
   'obs' => 'Conditions actuelles',
-  'yday' => 'Données d\'hier',
+  'yday' => 'Donnï¿½es d\'hier',
   'norms' => 'Normales',
-	'issued'  => 'Émises à',
-	'extremeMax' => 'Température la plus élevée',
-	'extremeMin' => 'Température la plus basse',
-	'normalMax' => 'Température maximale moyenne',
-	'normalMin' => 'Température minimale moyenne',
-	'normalMean' => 'Température moyenne',
+	'issued'  => 'ï¿½mises ï¿½',
+	'extremeMax' => 'Tempï¿½rature la plus ï¿½levï¿½e',
+	'extremeMin' => 'Tempï¿½rature la plus basse',
+	'normalMax' => 'Tempï¿½rature maximale moyenne',
+	'normalMin' => 'Tempï¿½rature minimale moyenne',
+	'normalMean' => 'Tempï¿½rature moyenne',
 	'extremeRainfall' => 'Pluie maximale',
 	'extremeSnowfall' => 'Neige maximale',
-	'extremePrecipitation' => 'Précipitation maximale',
+	'extremePrecipitation' => 'Prï¿½cipitation maximale',
 	'extremeSnowOnGround' => 'Maximum de neige au sol',
-	'almanacpop' => 'Fréquence mensuelle de précipitation',
-  'avgexhead'  => 'Moyennes et extrêmes',
+	'almanacpop' => 'Frï¿½quence mensuelle de prï¿½cipitation',
+  'avgexhead'  => 'Moyennes et extrï¿½mes',
 	'na' => 'n.d.',
-	'forecast24' => 'Prévisions 24 heures',
+	'forecast24' => 'Prï¿½visions 24 heures',
   'datetime' => 'Date/Heure',
   'temperature' => 'Temp',
-  'weatherconds' => 'Condition météo',
+  'weatherconds' => 'Condition mï¿½tï¿½o',
   'lop' => 'EdP &dagger;',
   'wind' => 'Vents',
-  'lopnote' => '&dagger; Éventualité de précipitation (EdP) mesurable, indiqué dans la prévision '.
-	  'publique comme probabilité de précipitation pour une période de temps.<br/>' .
+  'lopnote' => '&dagger; ï¿½ventualitï¿½ de prï¿½cipitation (EdP) mesurable, indiquï¿½ dans la prï¿½vision '.
+	  'publique comme probabilitï¿½ de prï¿½cipitation pour une pï¿½riode de temps.<br/>' .
     '&nbsp;&nbsp;Nulle: 0%<br/>' .
     '&nbsp;&nbsp;Basse: 40% et moins<br/>' .
     '&nbsp;&nbsp;Moyenne: 60% ou 70%<br/>' .
-    '&nbsp;&nbsp;Élevée : 80% et plus<br/>',
+    '&nbsp;&nbsp;ï¿½levï¿½e : 80% et plus<br/>',
   'nonsig' => '&Dagger; Valeur non significative',
   )
 );
@@ -659,17 +660,17 @@ $MonthNamesLang = array( // easier to use this than switching locales...
   ),
  'fr' => array(
 		'01' => 'janvier',
-		'02' => 'février',
+		'02' => 'fï¿½vrier',
 		'03' => 'mars',
 		'04' => 'avril',
 		'05' => 'mai',
 		'06' => 'juin',
 		'07' => 'juillet',
-		'08' => 'août',
+		'08' => 'aoï¿½t',
 		'09' => 'septembre',
 		'10' => 'octobre',
 		'11' => 'novembre',
-		'12' => 'décembre'
+		'12' => 'dï¿½cembre'
   )
 );
 
@@ -923,7 +924,7 @@ if($doIconv) {
 $Status .= "<!-- conditions\n" . print_r($conditions,true) . " -->\n";
 /*  Old example (in English)
 (
-    [cityobserved] => Observed at: <strong>Montréal-Trudeau Int'l Airport</strong>
+    [cityobserved] => Observed at: <strong>Montrï¿½al-Trudeau Int'l Airport</strong>
     [obsdate] => Date: <strong>1:00 PM EDT Thursday 27 October 2016</strong>
     [citycondition] => <strong>Mostly Cloudy</strong>
     [pressure] => Pressure: <strong>102.9 kPa</strong>
@@ -1478,7 +1479,7 @@ if(count($forecasthours) > 0) {
 		[month] => 09
 		[monthname] => septembre
 		[TZ] => HAE
-		[cond] => Généralement ensoleillé
+		[cond] => Gï¿½nï¿½ralement ensoleillï¿½
 		[icon] => 01
 		[lop] => Nulle
 		[pop] => 0
@@ -1565,7 +1566,7 @@ if(count($forecasthours) > 0) {
 // calc the width percentage based on number of icons to display
 $wdth = intval(100/(count($forecasticon)/2));
 // set the legend
-$weather7days = ($Lang=='fr')?'Prévisions':'Extended Forecast';
+$weather7days = ($Lang=='fr')?'Prï¿½visions':'Extended Forecast';
   
 // now make the table
 $weather = '<div class="ECforecast">'."\n";
@@ -2009,7 +2010,7 @@ function ECF_XML_URL_info($ECurl) {
 		
 		return( 
 		  array(
-		    "http://dd.weather.gc.ca/citypage_weather/xml/$PROV/${Xfile}_$lang.xml",
+		    "https://dd.weather.gc.ca/citypage_weather/xml/$PROV/${Xfile}_$lang.xml",
 				$pgcode,
 				$lang,
 				$unit,
