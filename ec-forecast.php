@@ -109,8 +109,8 @@ $ECforecasts = array(
 'Calgary, AB|https://weather.gc.ca/city/pages/ab-52_metric_e.html',
 'Regina, SK|https://weather.gc.ca/city/pages/sk-32_metric_e.html',
 'Winnipeg, MB|https://weather.gc.ca/city/pages/mb-38_metric_e.html',
-'Ottawa (Kanata - Orlï¿½ans), ON|https://weather.gc.ca/city/pages/on-118_metric_e.html',
-'Montrï¿½al, QC|https://weather.gc.ca/city/pages/qc-147_metric_e.html',
+'Ottawa (Kanata - Orléans), ON|https://weather.gc.ca/city/pages/on-118_metric_e.html',
+'Montréal, QC|https://weather.gc.ca/city/pages/qc-147_metric_e.html',
 'Happy Valley-Goose Bay, NL|https://weather.gc.ca/city/pages/nl-23_metric_e.html',
 'St. John\'s, NL|https://weather.gc.ca/city/pages/nl-24_metric_e.html',
 'Fredericton, NB|https://weather.gc.ca/city/pages/nb-29_metric_e.html',
@@ -177,7 +177,7 @@ if (isset($SITE['ECshow24hour']))     {$show24hour = $SITE['ECshow24hour'];}    
 //
 // Also returned are these useful variables filled in:
 // $title = updated/issued text in language selected
-// $textfcsthead = 'Current Forecast' or 'Textes des prï¿½visions'
+// $textfcsthead = 'Current Forecast' or 'Textes des prévisions'
 //
 // $weather = fully formed html table with two rows of Icons and text 
 // $textforecast = fully formed <div> with text forecast as <dl>
@@ -204,7 +204,7 @@ if (isset($_REQUEST['sce']) and strtolower($_REQUEST['sce']) == 'view' ) {
    header('Pragma: public');
    header('Cache-Control: private');
    header('Cache-Control: no-cache, must-revalidate');
-   header("Content-type: text/plain;charset=ISO-8859-1");
+   header("Content-type: text/plain,charset=ISO-8859-1");
    header("Accept-Ranges: bytes");
    header("Content-Length: $download_size");
    header('Connection: close');
@@ -272,8 +272,8 @@ $doDebug = (isset($_REQUEST['debug']) and strtolower($_REQUEST['debug']) == 'y')
 if ($Lang == 'fr') {
   $LMode = 'f';
   $ECNAME = "Environnement Canada";
-  $ECHEAD = 'Prï¿½visions';
-  $abnormalString = '<p class="ECforecast"><strong>*</strong> - Indique une tendance inverse de la tempï¿½rature.</p>' . "\n";
+  $ECHEAD = 'Prévisions';
+  $abnormalString = '<p class="ECforecast"><strong>*</strong> - Indique une tendance inverse de la température.</p>' . "\n";
 } else {
   $Lang = 'en';
   $LMode = 'e';
@@ -357,13 +357,13 @@ if(file_exists('ec-forecast-lookup.txt')) {
 
 $trantab = array(
   'ISO' =>
-	array('ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½',
-			 'ï¿½','ï¿½',
-			 'ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½',
-			 'ï¿½','ï¿½','ï¿½','ï¿½',
-			 'ï¿½','ï¿½','ï¿½','ï¿½',
-			 'ï¿½','ï¿½','ï¿½','ï¿½','ï¿½','ï¿½',
-			 'ï¿½','ï¿½'),
+	array('À','à','Â','â','Æ','æ',
+			 'Ç','ç',
+			 'É','é','È','è','Ê','ê','Ë','ë',
+			 'Î','î','Ï','ï',
+			 'Ô','ô','Œ','œ',
+			 'Ù','ù','Û','û','Ü','ü',
+			 'Ÿ','ÿ'),
 	// UTF-8 characters represented as ISO-8859-1
 	'UTF' =>
 	array('Ã€','Ã ','Ã‚','Ã¢','Ã†','Ã¦',
@@ -575,24 +575,24 @@ $LegendsLang = array(
   // French
   'citycondition' => 'Condition',
   'obsdate' => 'Date',
-  'cityobserved' => 'Enregistrï¿½es ï¿½',
-  'temperature' => 'Tempï¿½rature',
+  'cityobserved' => 'Enregistrées à',
+  'temperature' => 'Température',
   'pressure' => 'Pression',
   'tendency' => 'Tendance',
-  'humidity' => 'Humiditï¿½',
-  'windchill' => 'Refr.<br/>ï¿½olien',
-  'windchillabbr' => 'refroidissement ï¿½olien',
+  'humidity' => 'Humidité',
+  'windchill' => 'Refr.<br/>éolien',
+  'windchillabbr' => 'refroidissement éolien',
   'humidex' => 'Humidex',
-  'visibility' => 'Visibilitï¿½',
-  'dewpoint' => 'Point de rosï¿½e',
+  'visibility' => 'Visibilité',
+  'dewpoint' => 'Point de rosée',
   'wind' => 'Vent',
 	'calm' => 'calme',
 	'gust' => 'rafale',
-  'aqhi' => 'Cote air santï¿½',
+  'aqhi' => 'Cote air santé',
   'maxmin' => 'Normales',
   'maxtemp' => 'Max',
   'mintemp' => 'Min',
-  'precip' => 'Prï¿½cipitation totale',
+  'precip' => 'Précipitation totale',
   'precip' => 'Pluie',
   'snow' => 'Neige',
   'sunrise' => 'Lever',
@@ -600,33 +600,33 @@ $LegendsLang = array(
   'moonrise' => 'Lever de la lune',
   'moonset' => 'Coucher de la lune',
   'obs' => 'Conditions actuelles',
-  'yday' => 'Donnï¿½es d\'hier',
+  'yday' => 'Données d\'hier',
   'norms' => 'Normales',
-	'issued'  => 'ï¿½mises ï¿½',
-	'extremeMax' => 'Tempï¿½rature la plus ï¿½levï¿½e',
-	'extremeMin' => 'Tempï¿½rature la plus basse',
-	'normalMax' => 'Tempï¿½rature maximale moyenne',
-	'normalMin' => 'Tempï¿½rature minimale moyenne',
-	'normalMean' => 'Tempï¿½rature moyenne',
+	'issued'  => 'Émises à',
+	'extremeMax' => 'Température la plus élevée',
+	'extremeMin' => 'Température la plus basse',
+	'normalMax' => 'Température maximale moyenne',
+	'normalMin' => 'Température minimale moyenne',
+	'normalMean' => 'Température moyenne',
 	'extremeRainfall' => 'Pluie maximale',
 	'extremeSnowfall' => 'Neige maximale',
-	'extremePrecipitation' => 'Prï¿½cipitation maximale',
+	'extremePrecipitation' => 'Précipitation maximale',
 	'extremeSnowOnGround' => 'Maximum de neige au sol',
-	'almanacpop' => 'Frï¿½quence mensuelle de prï¿½cipitation',
-  'avgexhead'  => 'Moyennes et extrï¿½mes',
+	'almanacpop' => 'Fréquence mensuelle de précipitation',
+  'avgexhead'  => 'Moyennes et extrêmes',
 	'na' => 'n.d.',
-	'forecast24' => 'Prï¿½visions 24 heures',
+	'forecast24' => 'Prévisions 24 heures',
   'datetime' => 'Date/Heure',
   'temperature' => 'Temp',
-  'weatherconds' => 'Condition mï¿½tï¿½o',
+  'weatherconds' => 'Condition météo',
   'lop' => 'EdP &dagger;',
   'wind' => 'Vents',
-  'lopnote' => '&dagger; ï¿½ventualitï¿½ de prï¿½cipitation (EdP) mesurable, indiquï¿½ dans la prï¿½vision '.
-	  'publique comme probabilitï¿½ de prï¿½cipitation pour une pï¿½riode de temps.<br/>' .
+  'lopnote' => '&dagger; Éventualité de précipitation (EdP) mesurable, indiqué dans la prévision '.
+	  'publique comme probabilité de précipitation pour une période de temps.<br/>' .
     '&nbsp;&nbsp;Nulle: 0%<br/>' .
     '&nbsp;&nbsp;Basse: 40% et moins<br/>' .
     '&nbsp;&nbsp;Moyenne: 60% ou 70%<br/>' .
-    '&nbsp;&nbsp;ï¿½levï¿½e : 80% et plus<br/>',
+    '&nbsp;&nbsp;Élevée : 80% et plus<br/>',
   'nonsig' => '&Dagger; Valeur non significative',
   )
 );
@@ -660,17 +660,17 @@ $MonthNamesLang = array( // easier to use this than switching locales...
   ),
  'fr' => array(
 		'01' => 'janvier',
-		'02' => 'fï¿½vrier',
+		'02' => 'février',
 		'03' => 'mars',
 		'04' => 'avril',
 		'05' => 'mai',
 		'06' => 'juin',
 		'07' => 'juillet',
-		'08' => 'aoï¿½t',
+		'08' => 'août',
 		'09' => 'septembre',
 		'10' => 'octobre',
 		'11' => 'novembre',
-		'12' => 'dï¿½cembre'
+		'12' => 'décembre'
   )
 );
 
@@ -924,7 +924,7 @@ if($doIconv) {
 $Status .= "<!-- conditions\n" . print_r($conditions,true) . " -->\n";
 /*  Old example (in English)
 (
-    [cityobserved] => Observed at: <strong>Montrï¿½al-Trudeau Int'l Airport</strong>
+    [cityobserved] => Observed at: <strong>Montréal-Trudeau Int'l Airport</strong>
     [obsdate] => Date: <strong>1:00 PM EDT Thursday 27 October 2016</strong>
     [citycondition] => <strong>Mostly Cloudy</strong>
     [pressure] => Pressure: <strong>102.9 kPa</strong>
@@ -1479,7 +1479,7 @@ if(count($forecasthours) > 0) {
 		[month] => 09
 		[monthname] => septembre
 		[TZ] => HAE
-		[cond] => Gï¿½nï¿½ralement ensoleillï¿½
+		[cond] => Généralement ensoleillé
 		[icon] => 01
 		[lop] => Nulle
 		[pop] => 0
@@ -1566,7 +1566,7 @@ if(count($forecasthours) > 0) {
 // calc the width percentage based on number of icons to display
 $wdth = intval(100/(count($forecasticon)/2));
 // set the legend
-$weather7days = ($Lang=='fr')?'Prï¿½visions':'Extended Forecast';
+$weather7days = ($Lang=='fr')?'Prévisions':'Extended Forecast';
   
 // now make the table
 $weather = '<div class="ECforecast">'."\n";
