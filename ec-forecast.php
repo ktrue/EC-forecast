@@ -41,8 +41,9 @@
 // Version 5.01 - 07-Nov-2017 - added windchill display to conditions box
 // Version 5.02 - 20-Nov-2017 - added wind-gust display to conditions box and hourly display, fix no conds icon issue
 // Version 5.03 - 16-Oct-2019 - change XML access URL to https on EC site
+// Version 5.04 - 27-Dec-2022 - fixes for PHP 8.2
 //
-  $Version = "V5.03 - 16-Oct-2019";
+  $Version = "V5.04 - 27-Dec-2022";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -2010,7 +2011,7 @@ function ECF_XML_URL_info($ECurl) {
 		
 		return( 
 		  array(
-		    "https://dd.weather.gc.ca/citypage_weather/xml/$PROV/${Xfile}_$lang.xml",
+		    "https://dd.weather.gc.ca/citypage_weather/xml/$PROV/{$Xfile}_$lang.xml",
 				$pgcode,
 				$lang,
 				$unit,
