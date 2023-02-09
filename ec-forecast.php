@@ -42,8 +42,9 @@
 // Version 5.02 - 20-Nov-2017 - added wind-gust display to conditions box and hourly display, fix no conds icon issue
 // Version 5.03 - 16-Oct-2019 - change XML access URL to https on EC site
 // Version 5.04 - 27-Dec-2022 - fixes for PHP 8.2
+// Version 5.05 - 09-Feb-2023 - fixes for .png icons and PHP 8.2
 //
-  $Version = "V5.04 - 27-Dec-2022";
+  $Version = "V5.05 - 09-Feb-2023";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -78,7 +79,7 @@ $showConditions = true; // set to true to show current conditions box
 $showAlmanac    = true; // set to true to show almanac box
 $show24hour     = true; // set to true to show the 24 hour forecast box
 //
-$imagedir = "ec-icons/";
+$imagedirEC = "ec-icons/";
 //directory with your image icons WITH the trailing slash
 //
 $cacheName = 'ec-forecast.txt'; // note: will be changed to include XML source/language
@@ -96,7 +97,7 @@ $charsetOutput = 'ISO-8859-1'; // default character encoding of output
 $doIconDayDate = false;        // =false; Icon names = day of week. =true; icon names as Day dd Mon
 $doDetailDayDate = false;      // =false; for day name only, =true; detail day as name, nn mon.
 */ 
-$iconType = '.png';            // ='.gif' or ='.png' for ec-icons file type 
+$iconTypeEC = '.gif';            // ='.gif' or ='.png' for ec-icons file type
 
 // The optional multi-city forecast .. make sure the first entry is for the $ECURL location
 // The contents will be replaced by $SITE['ECforecasts'] if specified in your Settings.php
@@ -147,10 +148,10 @@ global $SITE;
 if (isset($SITE['fcsturlEC']))      {$ECURL = $SITE['fcsturlEC'];}
 if (isset($SITE['defaultlang']))    {$defaultLang = $SITE['defaultlang'];}
 if (isset($SITE['LINKtarget']))     {$LINKtarget = $SITE['LINKtarget'];}
-if (isset($SITE['fcsticonsdirEC'])) {$imagedir = $SITE['fcsticonsdirEC'];} 
+if (isset($SITE['fcsticonsdirEC'])) {$imagedirEC = $SITE['fcsticonsdirEC'];}
 if (isset($SITE['charset']))        {$charsetOutput = strtoupper($SITE['charset']); }
 // following overrides are new with V2.16
-if (isset($SITE['ECiconType']))     {$iconType = $SITE['ECiconType']; }         // new with V2.16
+if (isset($SITE['ECiconType']))     {$iconTypeEC = $SITE['ECiconType']; }         // new with V2.16
 /* deprecated in V5.00+ .. data not in XML feeds
 if (isset($SITE['ECiconDayDate']))  {$doIconDayDate = $SITE['ECiconDayDate']; } // new with V2.16
 if (isset($SITE['ECdetailDayDate'])){$doDetailDayDate = $SITE['ECdetailDayDate']; } // new with V2.16
@@ -777,7 +778,7 @@ if(isset($X->station)) { // got an observation.. format it
 	if(isset($X->condition) and strlen((string)$X->condition) > 0) {
 	  $conditions['citycondition'] = '<strong>'.
 	    (string)$X->condition . '</strong>';
-		$conditions['icon'] = (string)$X->iconCode . $iconType;
+		$conditions['icon'] = (string)$X->iconCode . $iconTypeEC;
 	}
 	$conditions['pressure'] = $Legends['pressure'] . ': <strong>'.
 	  (string)$X->pressure . ' kPa</strong>';
@@ -918,6 +919,7 @@ if(isset($xml->almanac->pop)) {
 
 if($doIconv) {
   foreach ($conditions as $key => $val) {
+    if($key == 'obsdate') {continue;} // it's already in iso-8859-1 strangely
 	  $conditions[$key] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$val);
   }
 }
@@ -1162,7 +1164,7 @@ ce soir.
     [relativeHumidity] => 90
 )
 */	
-  $forecasticon[$i] = (string)$X->abbreviatedForecast->iconCode . '.gif';
+  $forecasticon[$i] = (string)$X->abbreviatedForecast->iconCode;
 	$forecasttext[$i] = (string)$X->abbreviatedForecast->textSummary;
 	$forecastpop[$i]  = (string)$X->abbreviatedForecast->pop;
 	$forecasticon[$i] = ECF_replace_icon($forecasticon[$i],$forecastpop[$i]);
@@ -1295,7 +1297,7 @@ if (isset($conditions['cityobserved']) ) { // only generate if we have the data
   if (isset($conditions['icon'])) {
     $currentConditions .= '
     <td align="center" valign="middle">' . 
-"    <img src=\"$imagedir" . $conditions['icon'] . "\"\n" .
+"    <img src=\"$imagedirEC" . $conditions['icon'] . "\"\n" .
                "     height=\"51\" width=\"60\" \n" . 
 			   "     alt=\"" . strip_tags($conditions['citycondition']) . "\"\n" .
 			   "     title=\"" . strip_tags($conditions['citycondition']) . "\" /> <br/>" . 
@@ -1504,7 +1506,7 @@ if(count($forecasthours) > 0) {
 		  $alttext .= " (" . $F['pop'] ."%)";
 	  }
 	  $t .= '<span style="vertical-align: middle">'.
-		   "<img src=\"$imagedir" . ECF_replace_icon($F['icon'].'.gif',$F['pop']) . '"'. 
+		   "<img src=\"$imagedirEC" . ECF_replace_icon($F['icon'],$F['pop']) . '"'.
 			 ' height="25" width="30"' . 
 			 ' alt="'.$alttext.'" title="'.$alttext.'" /></span>'. 
 			 '&nbsp;&nbsp;<span style="vertical-align: top">'.$F['cond'].
@@ -1590,7 +1592,7 @@ foreach ($forecasticon as $i => $v) {
 		$alttext .= " (" . $forecastpop[$i] ."%)";
 	}
 	$forecasticon[$i] = 
-	  "    <img src=\"$imagedir" . $forecasticon[$i] . 
+	  "    <img src=\"$imagedirEC" . $forecasticon[$i] .
 		"\"\n" .
 		"     height=\"51\" width=\"60\" \n" . 
 		"     alt=\"$alttext\"\n" .
@@ -1804,21 +1806,20 @@ if ($printIt  and ! $doInclude ) {?>
 function ECF_replace_icon($icon,$pop) {
 // now replace icon with spiffy updated icons with embedded PoP to
 //    spruce up the dull ones from www.weatheroffice.ec.gc.ca 
-  global $imagedir,$iconType;
-			  
-  $curicon = $icon;
+  global $imagedirEC,$iconTypeEC;
+	$curicon = str_replace('.gif','',$icon);
   if ($pop > 0) {
-	$testicon = preg_replace("|.gif|","p$pop$iconType",$curicon);
-	if (file_exists("$imagedir/$testicon")) {
-	  $newicon = $testicon;
-	} else {
-	  $newicon = $curicon;
-	}
+	  $testicon = $curicon."p$pop$iconTypeEC";
+	  if (file_exists("$imagedirEC/$testicon")) {
+	    $newicon = $testicon;
+	  } else {
+	    $newicon = "$curicon$iconTypeEC";
+	  }
   } else {
-	$newicon = $curicon;
+	  $newicon = "$curicon$iconTypeEC";
   }
-  $newicon = preg_replace("|.gif|",$iconType,$newicon); // support other icon types
-  return($newicon);  
+#  $newicon = str_replace(".gif",$iconTypeEC,$newicon); // support other icon types
+  return($newicon);
 }
 
 //---------------------------------------------------------------------------------------------
