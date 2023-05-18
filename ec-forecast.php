@@ -43,8 +43,9 @@
 // Version 5.03 - 16-Oct-2019 - change XML access URL to https on EC site
 // Version 5.04 - 27-Dec-2022 - fixes for PHP 8.2
 // Version 5.05 - 09-Feb-2023 - fixes for .png icons and PHP 8.2
+// Version 5.06 - 18-May-2023 - added 'advisory' alert display same as 'statement' type
 //
-  $Version = "V5.05 - 09-Feb-2023";
+  $Version = "V5.06 - 18-May-2023";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -1680,7 +1681,8 @@ if (count($alertlinks) > 0) { // create the $alertstring HTML if there are alert
     'watch'   => 'color: black; background-color: #ff0; border: 2px solid black;',
 	'statement' => 'color: white; background-color: #707070; border: 2px solid black;',
     'ended'   => 'color: white; background-color: #6c6; border: 2px solid black;',
-    'noalert' => 'color: black; background-color: #fff; border: 2px solid black;'
+    'noalert' => 'color: black; background-color: #fff; border: 2px solid black;',
+    'advisory' => 'color: white; background-color: #707070; border: 2px solid black;',
   );
 
 
@@ -1737,6 +1739,7 @@ if ($printIt and  ! $doInclude ) {
 /* styling for EC alert boxes */ 
 .ECwarning a:link,
 .ECstatement a:link,
+.ECadvisory a:link,
 .ECended a:link,
 .ECended a:visited
 {
@@ -1748,7 +1751,8 @@ if ($printIt and  ! $doInclude ) {
 }
 
 .ECwarning a:visited,
-.ECstatement a:visited
+.ECstatement a:visited,
+.ECadvisory a:visited
 {
 	color:white !important;
 }
