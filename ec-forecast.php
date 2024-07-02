@@ -44,8 +44,9 @@
 // Version 5.04 - 27-Dec-2022 - fixes for PHP 8.2
 // Version 5.05 - 09-Feb-2023 - fixes for .png icons and PHP 8.2
 // Version 5.06 - 18-May-2023 - added 'advisory' alert display same as 'statement' type
+// Version 5.07 - 02-Jul-2024 - fixes for changes in EC XML returns w/o almanac section
 //
-  $Version = "V5.06 - 18-May-2023";
+  $Version = "V5.07 - 02-Jul-2024";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -1400,7 +1401,7 @@ if (isset($conditions['cityobserved']) ) { // only generate if we have the data
 //---------------------------------------------------------------------------------------------
 // Generate the $almanac HTML
 
-if(strlen($conditions['extremeMax']) > 3 ) { // got any almanac? 
+if(isset($conditions['extremeMax']) and strlen($conditions['extremeMax']) > 3 ) { // got any almanac? 
   $almanacList = array(
     'extremeMax', 
     'extremeMin', 
