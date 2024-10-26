@@ -45,32 +45,38 @@
 // Version 5.05 - 09-Feb-2023 - fixes for .png icons and PHP 8.2
 // Version 5.06 - 18-May-2023 - added 'advisory' alert display same as 'statement' type
 // Version 5.07 - 02-Jul-2024 - fixes for changes in EC XML returns w/o almanac section
+// Version 6.00 - 26-Oct-2024 - rewrite to use new EC JSON return instead of XML citypage
 //
-  $Version = "V5.07 - 02-Jul-2024";
+  $Version = "V6.00 - 26-Oct-2024";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
 // NOTE: as of V5.00, the separate file 'ec-forecast-lookup.txt' is REQUIRED to be in the
 //       same directory as this script.  It provides the lookup for EC page-id to XML file id.
 //---------------------------------------------------------------------------------------------
+// NOTE: Version 6.00+ allows use of old and new format URLS for ECURL entries in the script
 //
+// OLD: $ECURL = 'https://weather.gc.ca/city/pages/on-77_metric_e.html';  # Old format
+// NEW  $ECURL = 'https://weather.gc.ca/en/location/index.html?coords=43.258,-79.869'; # New Format
+//
+//---------------------------------------------------------------------------------------------
 //* 
 // Settings:
 // --------- start of settings ----------
 // you need to set the $ECURL to the printable forecast for your area
 //
-//  Go to https://weather.gc.ca/canada_e.html and select your language English or French
+//  Go to https://weather.gc.ca/ and select your language English or French
 //
-//  Click on your province on the map.
-//  Choose a location and click on the link for the selected forecast city
+//  Search for your location by name.
 //
 //  Copy the URL from the browser address bar, and paste it into $ECURL below.
 //  The URL may be from either the weather.gc.ca or meteo.gc.ca sites.
 //  Examples:
-//  English: https://weather.gc.ca/city/pages/on-107_metric_e.html or 
-//  French:  https://meteo.gc.ca/city/pages/on-107_metric_f.html   
+//  English: https://weather.gc.ca/en/location/index.html?coords=43.258,-79.869 or 
+//  French:  https://meteo.gc.ca/fr/location/index.html?coords=43.258,-79.869   
 //
-$ECURL = 'https://weather.gc.ca/city/pages/on-107_metric_e.html';
+//$ECURL = 'https://weather.gc.ca/city/pages/on-77_metric_e.html';  # Old format
+$ECURL = 'https://weather.gc.ca/en/location/index.html?coords=43.258,-79.869'; # New Format
 //
 $defaultLang = 'en';  // set to 'fr' for french default language
 //                    // set to 'en' for english default language
@@ -84,7 +90,7 @@ $show24hour     = true; // set to true to show the 24 hour forecast box
 $imagedirEC = "ec-icons/";
 //directory with your image icons WITH the trailing slash
 //
-$cacheName = 'ec-forecast.txt'; // note: will be changed to include XML source/language
+$cacheName = 'ec-forecast.json'; // note: will be changed to include lat-long/language
 $cacheFileDir = './';   // directory to store cache files (with trailing / )
 //
 $refetchSeconds = 600;  // get new forecast from EC 
@@ -103,42 +109,20 @@ $iconTypeEC = '.gif';            // ='.gif' or ='.png' for ec-icons file type
 
 // The optional multi-city forecast .. make sure the first entry is for the $ECURL location
 // The contents will be replaced by $SITE['ECforecasts'] if specified in your Settings.php
-/*
+//*
 $ECforecasts = array(
  // Location|forecast-URL  (separated by | characters)
-'Hamilton, ON|https://weather.gc.ca/city/pages/on-77_metric_e.html',
-'St. Catharines, ON|https://weather.gc.ca/city/pages/on-107_metric_e.html', // St. Catharines, ON
-'Lincoln, ON|https://weather.gc.ca/city/pages/on-47_metric_e.html',
-'Vancouver, BC|https://weather.gc.ca/city/pages/bc-74_metric_e.html',
-'Calgary, AB|https://weather.gc.ca/city/pages/ab-52_metric_e.html',
-'Regina, SK|https://weather.gc.ca/city/pages/sk-32_metric_e.html',
-'Winnipeg, MB|https://weather.gc.ca/city/pages/mb-38_metric_e.html',
-'Ottawa (Kanata - Orléans), ON|https://weather.gc.ca/city/pages/on-118_metric_e.html',
-'Montréal, QC|https://weather.gc.ca/city/pages/qc-147_metric_e.html',
-'Happy Valley-Goose Bay, NL|https://weather.gc.ca/city/pages/nl-23_metric_e.html',
-'St. John\'s, NL|https://weather.gc.ca/city/pages/nl-24_metric_e.html',
-'Fredericton, NB|https://weather.gc.ca/city/pages/nb-29_metric_e.html',
-'Halifax, NS|https://weather.gc.ca/city/pages/ns-19_metric_e.html',
-'Charlottetown, PE|https://weather.gc.ca/city/pages/pe-5_metric_e.html',
-'Whitehorse, YT|https://weather.gc.ca/city/pages/yt-16_metric_e.html',
-'Yellowknife, NT|https://weather.gc.ca/city/pages/nt-24_metric_e.html',
-'Resolute, NU|https://weather.gc.ca/city/pages/nu-27_metric_e.html',
-'Iqaluit, NU|https://weather.gc.ca/city/pages/nu-21_metric_e.html',
-'Placentia, NL|https://weather.gc.ca/city/pages/nl-30_metric_e.html',
-'Channel-Port aux Basques, NL|https://weather.gc.ca/city/pages/nl-17_metric_e.html',
-'Badger, NL|https://weather.gc.ca/city/pages/nl-34_metric_e.html',
-'St. Anthony, NL|https://weather.gc.ca/city/pages/nl-37_metric_e.html',
-'Mont-Tremblant, QC|https://weather.gc.ca/city/pages/qc-167_metric_e.html',
-'Upsala, ON|https://weather.gc.ca/city/pages/on-154_metric_e.html',
-'Grande Prairie, AB|https://meteo.gc.ca/city/pages/ab-31_metric_f.html',
-'Grand Forks, BC|https://weather.gc.ca/city/pages/bc-39_metric_e.html',
-'Baccaro Point, NS|https://weather.gc.ca/city/pages/ns-37_metric_e.html',
-'The Pas, MB|https://meteo.gc.ca/city/pages/mb-30_metric_f.html',
-'Jasper, AB|https://meteo.gc.ca/city/pages/ab-70_metric_f.html',
-'Elliot Lake, ON|https://weather.gc.ca/city/pages/on-170_metric_e.html',
-'Deer Lake, NL|https://weather.gc.ca/city/pages/nl-39_metric_e.html',
-'Toronto, ON|https://weather.gc.ca/city/pages/on-143_metric_e.html',
-'Whistler, BC|https://weather.gc.ca/city/pages/bc-86_metric_e.html'
+  'St. Catharines, ON|https://weather.gc.ca/en/location/index.html?coords=43.160,-79.245', // St. Catharines, ON
+  'Hamilton, ON|https://weather.gc.ca/city/pages/on-77_metric_e.html',
+  'Hamilton, ON new|https://weather.gc.ca/en/location/index.html?coords=43.258,-79.869',
+  'Montréal, QC|https://meteo.gc.ca/city/pages/qc-147_metric_f.html',
+  'Montréal, QC new|https://meteo.gc.ca/fr/location/index.html?coords=45.529,-73.562',
+  'St. John\'s, NL new|https://meteo.gc.ca/fr/location/index.html?coords=47.558,-52.717',
+  'Victoria, BC new|https://weather.gc.ca/en/location/index.html?coords=48.433,-123.362',
+  'Vancouver, BC new|https://weather.gc.ca/en/location/index.html?coords=49.245,-123.115',
+  'Lakes District, BC new|https://weather.gc.ca/en/location/index.html?coords=53.8176,-125.8463',
+  'Herschel Island, YT new|https://weather.gc.ca/en/location/index.html?coords=69.590,-139.099',
+  'Burgeo - Ramea, NL new|https://meteo.gc.ca/fr/location/index.html?coords=47.9085,-57.4089',
 ); 
 //*/
 // end of new settings with V2.16 ------
@@ -186,7 +170,7 @@ if (isset($SITE['ECshow24hour']))     {$show24hour = $SITE['ECshow24hour'];}    
 // $weather = fully formed html table with two rows of Icons and text 
 // $textforecast = fully formed <div> with text forecast as <dl>
 //
-// $alertstring = styled box with hotlinks to advisories/warnings
+// $alertstring = styled HTML with current advisories/warnings with dropdown/expand
 // $currentConditions = table with current conditions at EC forecast site
 // $almanac = styled box with Average/Extreme data for the EC forecast site (V5.00)
 // $forecast24h = styled table with rolling 24hr forecast details (V5.00)
@@ -231,11 +215,7 @@ $forecastrealday = array();
 $forecasthours   = array();
 $updated = 'unknown';
 $currentConditions = ''; // HTML for table of current conditions
-$alerttype = array();
-$alerts = array();
-$alertlinks = array();
-$alertlinkstext = array();
-$alertstring = '';
+$alertstring = ''; // HTML+Javascript for alert displays
 $forecast24h = ''; // HTML for 24hour forecast table
 $almanac = ''; // HTML for almanac table
 
@@ -421,31 +401,105 @@ $ECURL = preg_replace('|weatheroffice|i','weather',$ECURL); // autochange Old EC
 $ECURL = preg_replace('|_.\.html|',"_$LMode.html",$ECURL);
 $ECURL = preg_replace('|http://|i','https://',$ECURL); // force HTTPS access
 
+# compute new URL based on old URL format if necessary
+
+list($ECURL,$PAGEURL,$cacheName) = gen_ecurl($ECURL);
+
 // force refresh of cache
 if (isset($_REQUEST['cache'])) { $refetchSeconds = 1; }
 
-// refresh cached copy of page if needed
-// fetch/cache code by Tom at carterlake.org
-if($Lang == 'fr' and preg_match('|weather.gc.ca|i',$ECURL)) {
-	$ECURL = str_replace('weather.gc.ca','meteo.gc.ca',$ECURL);
-	$Status .= "<!-- using $ECURL for French forecast instead of weather.gc.ca -->\n";
-}
-if($Lang == 'en' and preg_match('|meteo.gc.ca|i',$ECURL)) {
-	$ECURL = str_replace('meteo.gc.ca','weather.gc.ca',$ECURL);
-	$Status .= "<!-- using $ECURL for English forecast instead of meteo.gc.ca -->\n";
+
+function gen_ecurl($URL) {
+  # convert old to new format URLS and process new format URLs
+  # to generate data and link URLs
+  
+  global $Lang,$EClookup,$Status,$cacheFileDir;
+  # input URLs:
+  # 
+  
+  # Old Format
+  # $ECURL = 'https://weather.gc.ca/city/pages/on-107_metric_e.html';  # Old format
+  #           https://meteo.gc.ca/city/pages/on-107_metric_f.html
+  
+  #New format
+  #           https://weather.gc.ca/en/location/index.html?coords=49.245,-123.115
+  #           https://meteo.gc.ca/fr/location/index.html?coords=49.245,-123.115
+  
+  # return:
+  # $ECURL = 'https://weather.gc.ca/api/app/en/Location/49.245,-123.115?type=city'; 
+  #           https://meteo.gc.ca/api/app/fr/Location/49.245,-123.115?type=city
+  
+  $Status .= "<!-- gen_ecurl: URL='$URL' -->\n";
+  
+  if(strpos($URL,'/pages/')!==false) { # handle OLD forma
+    # OLD format URL
+    $U= parse_url($URL);
+    $host = $U['host'];
+    $path = $U['path'];
+    $P = pathinfo($path);
+    $pp = explode('_',$P['filename'].'_');
+    $id = $pp[0]; # gets the PP-nnn code from old url.
+    
+    if(isset($EClookup[$id])){
+      #  'ab-1' => 'AB|s0000493|Cochrane|Cochrane|51.21|-114.47',
+
+      list($pv,$scode,$ENname,$FRname,$lat,$lon) = explode('|',$EClookup[$id]);
+      $latlon = "$lat,$lon";
+     } else {
+      $Status .= "<!-- Warning: unable to find $id in EClookup table -->\n";
+    }
+    
+    $cache = $cacheFileDir.'ecforecast-'.str_replace('.','_',$latlon)."-$Lang.json";
+   
+    if($Lang == 'fr') {
+      $ECURL = "https://meteo.gc.ca/api/app/fr/Location/$latlon?type=city";
+      $PGURL = "https://meteo.gc.ca/fr/location/index.html?coords=$latlon";
+      $Status .= "<!-- using $ECURL for French forecast -->\n";
+      $Status .= "<!-- using $PGURL for page -->\n";
+    }
+    if($Lang == 'en') {
+     $ECURL = "https://weather.gc.ca/api/app/en/Location/$latlon?type=city";
+     $PGURL = "https://weather.gc.ca/en/location/index.html?coords=$latlon";
+     $Status .= "<!-- using $ECURL for English forecast -->\n";
+     $Status .= "<!-- using $PGURL for page -->\n";
+    }
+    $Status  .= "<!-- cache '$cache' -->\n";
+    return(array($ECURL,$PGURL,$cache));
+  }
+
+  if(strpos($URL,'/location/')!==false) { # Handle new format URLs
+    # NEW format URL
+    $U= parse_url($URL);
+    $host = $U['host'];
+    $path = $U['path'];
+    $query = $U['query'];
+    
+    $latlon = str_replace('coords=','',$query);
+    $cache = $cacheFileDir.'ecforecast-'.str_replace('.','_',$latlon)."-$Lang.json";
+   
+    if($Lang == 'fr') {
+      $ECURL = "https://meteo.gc.ca/api/app/fr/Location/$latlon?type=city";
+      $PGURL = "https://meteo.gc.ca/fr/location/index.html?coords=$latlon";
+      $Status .= "<!-- using $ECURL for French forecast -->\n";
+      $Status .= "<!-- using $PGURL for page -->\n";
+    }
+    if($Lang == 'en') {
+     $ECURL = "https://weather.gc.ca/api/app/en/Location/$latlon?type=city";
+     $PGURL = "https://weather.gc.ca/en/location/index.html?coords=$latlon";
+     $Status .= "<!-- using $ECURL for English forecast -->\n";
+     $Status .= "<!-- using $PGURL for page -->\n";
+    }
+    $Status  .= "<!-- cache '$cache' -->\n";
+    return(array($ECURL,$PGURL,$cache));
+  }
+  
 }
 
-// NEW with V5.00: lookup/convert EC page URL to XML filename URL that we load/cache
-list($ECXMLURL,$ECpgcode,$EClang,$ECunits,$ECXMLbase) = ECF_XML_URL_info($ECURL);
-
-if($ECXMLURL === false) {
+if($ECURL === false) {
 	print $Status;
-	print "<p>ec-forecast.php ERROR: '$FCSTlocation' has an invalid EC page URL '$ECURL'.<br/> The corresponding XML weather data file is not found for page ID='$ECpgcode'.</p>\n"; 
+	print "<p>ec-forecast.php ERROR: '$FCSTlocation' has an invalid EC page URL '$ECURL'.<br/> The corresponding JSON weather data file is not found for page ID='$ECpgcode'.</p>\n"; 
 	return(false);
 }
-// unique cache per language used
-$cacheName = preg_replace('|\.txt|is',"-$haveIndex-$ECpgcode-$ECXMLbase-$Lang.txt",$cacheName); 
-$cacheName = $cacheFileDir.$cacheName;
 $cacheAge = (file_exists($cacheName))?time()-filemtime($cacheName):9999999;
 
 //---------------------------------------------------------------------------------------------
@@ -457,12 +511,12 @@ if (file_exists($cacheName) and $cacheAge < $refetchSeconds) {
     $content = file_get_contents($cacheName);
 	} else {
 		$Status .= "<!-- refreshing $cacheName age=$cacheAge seconds old -->\n";
-		$Status .= "<!-- EC main URL='$ECURL'\n     EC   XMLURL='$ECXMLURL' -->\n";
+		$Status .= "<!-- ECURL='$ECURL'\n     EC   PAGEURL='$PAGEURL' -->\n";
 		$time_start = ECF_fetch_microtime();
-		$rawhtml = ECF_fetch_URL($ECXMLURL,false);
-	$time_stop = ECF_fetch_microtime();
-	$total_time += ($time_stop - $time_start);
-	$time_fetch = sprintf("%01.3f",round($time_stop - $time_start,3));
+		$rawhtml = ECF_fetch_URL($ECURL,false);
+	  $time_stop = ECF_fetch_microtime();
+	  $total_time += ($time_stop - $time_start);
+	  $time_fetch = sprintf("%01.3f",round($time_stop - $time_start,3));
 		$RC = '';
 	if (preg_match("|^HTTP\/\S+ (.*)\r\n|",$rawhtml,$matches)) {
 		$RC = trim($matches[1]);
@@ -474,7 +528,7 @@ if (file_exists($cacheName) and $cacheAge < $refetchSeconds) {
 		preg_match('|Location: (.*)\r\n|',$rawhtml,$matches);
 		if(isset($matches[1])) {$ECURL = $matches[1];} // update the URL
 		$time_start = ECF_fetch_microtime();
-		$rawhtml = ECF_fetch_URL($ECXMLURL,false);
+		$rawhtml = ECF_fetch_URL($ECURL,false);
 		$time_stop = ECF_fetch_microtime();
 		$total_time += ($time_stop - $time_start);
 		$time_fetch = sprintf("%01.3f",round($time_stop - $time_start,3));
@@ -485,9 +539,9 @@ if (file_exists($cacheName) and $cacheAge < $refetchSeconds) {
 		$Status .= "<!-- second time to fetch: $time_fetch sec ($RC) -->\n";
 	}
 
-	$i = strpos($rawhtml,"\r\n\r\n");
-	$headers = substr($rawhtml,0,$i);
-	$content = substr($rawhtml,$i+4);
+  $stuff = explode("\r\n\r\n",$rawhtml); // maybe we have more than one header due to redirects.
+  $content = (string)array_pop($stuff); // last one is the content
+  $headers = (string)array_pop($stuff); // next-to-last-one is the headers
 
 	if(preg_match('|200|',$RC)) { // good return so save off the cache	  
 		$fp = fopen($cacheName, "w");
@@ -690,232 +744,197 @@ if($doIconv) { // put months in UTF-8
   $Status .= "<!-- converted lookup months to UTF-8 -->\n";
 }
 
-// load the XML forecast into an array for processing	
-$xml = simplexml_load_string($content);
+$RAWJSON = json_decode($content,true);
+$JSON = isset($RAWJSON[0]['lastUpdated'])?$RAWJSON[0]:array();
 
 //----------- handle the city conditions -----------------------------------------
-$X = $xml->currentConditions;
+$X = $JSON['observation'];
 
 /*
-SimpleXMLElement Object
-(
-    [station] => AÃ©roport int. Munro de Hamilton
-    [dateTime] => Array
-        (
-            [0] => SimpleXMLElement Object
-                (
-                    [@attributes] => Array
-                        (
-                            [name] => observation
-                            [zone] => UTC
-                            [UTCOffset] => 0
-                        )
+    "observation": {
+      "observedAt": "Hamilton Munro Int'l Airport",
+      "provinceCode": "ON",
+      "climateId": "6153193",
+      "tcid": "yhm",
+      "timeStamp": "2024-10-23T18:00:00.000Z",
+      "timeStampText": "2:00 PM EDT Wednesday 23 October 2024",
+      "iconCode": "03",
+      "condition": "Mostly Cloudy",
+      "temperature": {
+        "imperial": "68",
+        "imperialUnrounded": "68.4",
+        "metric": "20",
+        "metricUnrounded": "20.2",
+        "qaValue": 100
+      },
+      "dewpoint": {
+        "imperial": "51",
+        "imperialUnrounded": "50.7",
+        "metric": "10",
+        "metricUnrounded": "10.4",
+        "qaValue": 100
+      },
+      "feelsLike": {
+        "imperial": "72",
+        "metric": "22",
+        "qaValue": 100
+      },
+      "pressure": {
+        "imperial": "29.9",
+        "metric": "101.1",
+        "changeImperial": "0.01",
+        "changeMetric": "0.04",
+        "qaValue": 100
+      },
+      "tendency": "rising",
+      "visibility": {
+        "imperial": "15",
+        "metric": "24",
+        "qaValue": 100
+      },
+      "visUnround": 24.10000000000000142108547152020037174224853515625,
+      "humidity": "53",
+      "humidityQaValue": 100,
+      "windSpeed": {
+        "imperial": "17",
+        "metric": "27",
+        "qaValue": 100
+      },
+      "windGust": {
+        "imperial": "24",
+        "metric": "38",
+        "qaValue": 100
+      },
+      "windDirection": "WSW",
+      "windDirectionQAValue": 100,
+      "windBearing": "243.0"
+    },
 
-                    [year] => 2017
-                    [month] => 09
-                    [day] => 19
-                    [hour] => 20
-                    [minute] => 00
-                    [timeStamp] => 20170919200000
-                    [textSummary] => 19 septembre 2017 20h00 UTC
-                )
 
-            [1] => SimpleXMLElement Object
-                (
-                    [@attributes] => Array
-                        (
-                            [name] => observation
-                            [zone] => HAE
-                            [UTCOffset] => -4
-                        )
-
-                    [year] => 2017
-                    [month] => 09
-                    [day] => 19
-                    [hour] => 16
-                    [minute] => 00
-                    [timeStamp] => 20170919160000
-                    [textSummary] => 19 septembre 2017 16h00 HAE
-                )
-
-        )
-
-    [condition] => Partiellement nuageux
-    [iconCode] => 02
-    [temperature] => 24.9
-    [dewpoint] => 19.7
-    [humidex] => 32
-    [pressure] => 101.5
-    [visibility] => 24.1
-    [relativeHumidity] => 73
-    [wind] => SimpleXMLElement Object
-        (
-            [speed] => 9
-            [gust] => SimpleXMLElement Object
-                (
-                    [@attributes] => Array
-                        (
-                            [unitType] => metric
-                            [units] => km/h
-                        )
-
-                )
-
-            [direction] => E
-            [bearing] => 83.0
-        )
-
-)*/	
+*/	
 // NOTE: we'll store the current conditions in the $conditions array for later assembly
 
-if(isset($X->station)) { // got an observation.. format it
+if(isset($X['observedAt'])) { // got an observation.. format it
 	$conditions['cityobserved'] = $Legends['cityobserved'] . ': <strong>'.
-	  (string)$X->station . '</strong>';
-	$obsdate = (string)$X->dateTime[1]->textSummary;
+	  (string)$X['observedAt'] . '</strong>';
+	$obsdate = (string)$X['timeStampText'];
 	if($doIconv) {
 		$obsdate = iconv($charsetInput,$charsetOutput.'//TRANSLIT',ECF_UTF_CLEANUP($obsdate));
 	}
 	$conditions['obsdate'] = $Legends['obsdate'] .': <strong>'. 
 	  $obsdate . '</strong>';
-	if(isset($X->condition) and strlen((string)$X->condition) > 0) {
+	if(isset($X['condition']) and strlen((string)$X['condition']) > 0) {
 	  $conditions['citycondition'] = '<strong>'.
-	    (string)$X->condition . '</strong>';
-		$conditions['icon'] = (string)$X->iconCode . $iconTypeEC;
+	    (string)$X['condition'] . '</strong>';
+		$conditions['icon'] = (string)$X['iconCode'] . $iconTypeEC;
 	}
 	$conditions['pressure'] = $Legends['pressure'] . ': <strong>'.
-	  (string)$X->pressure . ' kPa</strong>';
+	  (string)$X['pressure']['metric'] . ' kPa</strong>';
 	$conditions['tendency'] = $Legends['tendency'] . ': <strong>'.
-	  (string)$X->pressure['tendency'] . '</strong>';
+	  (string)$X['pressure']['changeMetric'] . ' kPa</strong>';
 	$conditions['temperature'] = $Legends['temperature'] . ': <strong>'.
-	  (string)$X->temperature . ' &deg;C</strong>';
-	if(strlen((string)$X->dewpoint) > 0) {
+	  (string)$X['temperature']['metric'] . ' &deg;C</strong>';
+	if(strlen((string)$X['dewpoint']['metric']) > 0) {
 	  $conditions['dewpoint'] = $Legends['dewpoint'] . ': <strong>'.
-	    (string)$X->dewpoint . ' &deg;C</strong>';
+	    (string)$X['dewpoint']['metric'] . ' &deg;C</strong>';
 	}
-	if(strlen((string)$X->relativeHumidity) > 0) {
+	if(isset($X['humidity'])) {
 	  $conditions['humidity'] = $Legends['humidity'] . ': <strong>'.
-	    (string)$X->relativeHumidity . ' %</strong>';
+	    (string)$X['humidity'] . ' %</strong>';
 	}
 	$conditions['wind'] = $Legends['wind'] . ': <strong>';
-	  if($X->wind->speed > 0) {
-	    $conditions['wind'] .= (string)$X->wind->direction . ' ' . (string)$X->wind->speed; 
-		  if(isset($X->wind->gust) and strlen((string)$X->wind->gust)>0) {
-			  $conditions['wind'] .= ' ' . $Legends['gust'] . ' ' . (string)$X->wind->gust;
+	  if($X['windSpeed']['metric'] > 0) {
+	    $conditions['wind'] .= (string)$X['windDirection'] . ' ' . $X['windSpeed']['metric']; 
+		  if(isset($X['windGust']['metric']) and strlen((string)$X['windGust']['metric'])>0) {
+			  $conditions['wind'] .= ' ' . $Legends['gust'] . ' ' . (string)$X['windGust']['metric'];
 		  }
 		  $conditions['wind'] .= ' km/h';
 		} else {
 			$conditions['wind'] .= $Legends['calm'];
 		}
 	$conditions['wind'] .= '</strong>';
-	if(strlen((string)$X->humidex) > 0) {
+	if(isset($X['humidex'])) {
 	  $conditions['humidex'] = $Legends['humidex'] . ': <strong>'.
-	    (string)$X->humidex . '</strong>';
+	    (string)$X['humidex'] . '</strong>';
 	}
-	if(strlen((string)$X->windChill) > 0) {
+	if($X['temperature']['metric'] <= 0 and isset($X['feelsLike']['metric'])) {
 		$tl = str_replace('<br/>',' ',$Legends['windchill']);
 	  $conditions['windchill'] = $tl . ': <strong>'.
-	    (string)$X->windChill . '</strong>';
+	    $X['feelsLike']['metric'] . ' &deg;C</strong>';
 	}
-	if(strlen((string)$X->visibility) > 0) {
+	if(isset($X['visibility']['metric'])) {
 	  $conditions['visibility'] = $Legends['visibility'] . ': <strong>'.
-	    (string)$X->visibility . ' km</strong>';
+	    $X['visibility']['metric'] . ' km</strong>';
 	}
 	
 }
 
-// extract the updated time and 'normals'
-$X = $xml->forecastGroup;
-
-if(isset($X->regionalNormals->temperature[1])) {
-	$conditions['maxmin'] = $Legends['maxmin'] . 
-	  ': Max <strong>' . (string)$X->regionalNormals->temperature[0] . 
-		'&deg;C</strong> Min <strong>' . (string)$X->regionalNormals->temperature[1] .
-		'&deg;C</strong>';
-}
-// extract the yesterday values
-$X = $xml->yesterdayConditions;
-if(isset($X->temperature[1])) {
-	$conditions['ydayheading'] = $Legends['yday'];
-	$conditions['ydaymaxtemp'] = $Legends['maxtemp'] . ': <strong>' .
-	  (string)$X->temperature[0] . ' &deg;C</strong>';
-	$conditions['ydaymintemp'] = $Legends['mintemp'] . ': <strong>' .
-	  (string)$X->temperature[1] . ' &deg;C</strong>';
-	$conditions['ydayprecip'] = $Legends['precip'] . ': <strong>' .
-	  (string)$X->precip . ' mm</strong>';
-}
-// extract the sunrise/sunset data	
-$X = $xml->riseSet;
-if(isset($X->dateTime[1]->hour)) {
-	$conditions['sunrise'] = $Legends['sunrise'] . ': <strong>' .
-	  (string)$X->dateTime[1]->hour . ':' . (string)$X->dateTime[1]->minute . '</strong>';
-	$conditions['sunset'] = $Legends['sunset'] . ': <strong>' .
-	  (string)$X->dateTime[3]->hour . ':' . (string)$X->dateTime[3]->minute . '</strong>';
-}
-/*   <almanac>
- <temperature class="extremeMax" period="1960-2011" unitType="metric" units="C" year="1965">28.9</temperature>
- <temperature class="extremeMin" period="1960-2011" unitType="metric" units="C" year="1999">0.6</temperature>
- <temperature class="normalMax" unitType="metric" units="C">19.5</temperature>
- <temperature class="normalMin" unitType="metric" units="C">9.0</temperature>
- <temperature class="normalMean" unitType="metric" units="C">14.3</temperature>
- <precipitation class="extremeRainfall" period="1960-2011" unitType="metric" units="mm" year="1989">44.5</precipitation>
- <precipitation class="extremeSnowfall" period="1960-2011" unitType="metric" units="cm" year="1960">0.0</precipitation>
- <precipitation class="extremePrecipitation" period="1960-2011" unitType="metric" units="mm" year="1989">44.5</precipitation>
- <precipitation class="extremeSnowOnGround" period="1970-2010" unitType="metric" units="cm" year="1970">0.0</precipitation>
- <pop units="%">37.0</pop>
- </almanac>
+// extract 'normals'
+/*
+    "dailyFcst": {
+      "dailyIssuedTimeShrt": "5:00 AM PDT",
+      "regionalNormals": {
+        "metric": {
+          "highTemp": 13,
+          "lowTemp": 6,
+          "text": "Low 6. High 13."
+        },
+        "imperial": {
+          "highTemp": 55,
+          "lowTemp": 43,
+          "text": "Low 6. High 13."
+        }
+      },
 */
+if(isset($JSON['dailyFcst']['dailyIssuedTimeShrt'])) {
+$X = $JSON['dailyFcst'];
 
-//---------------------------------------------------------------------------------------------
-// process the almanac data
+  if(isset($X['regionalNormals']['metric']['text'])) {
+    $conditions['maxmin'] = $Legends['maxmin'] . 
+      ': Max <strong>' . $X['regionalNormals']['metric']['highTemp'] . 
+      '&deg;C</strong> Min <strong>' . $X['regionalNormals']['metric']['lowTemp'] .
+      '&deg;C</strong>';
+  }
 
-if($doDebug) {$Status .= "<!-- almanac\n".print_r($xml->almanac,true)." -->\n";}
+  /*  yesterday info not available
+  // extract the yesterday values
+  $X = $xml->yesterdayConditions;
+  if(isset($X->temperature[1])) {
+    $conditions['ydayheading'] = $Legends['yday'];
+    $conditions['ydaymaxtemp'] = $Legends['maxtemp'] . ': <strong>' .
+      (string)$X->temperature[0] . ' &deg;C</strong>';
+    $conditions['ydaymintemp'] = $Legends['mintemp'] . ': <strong>' .
+      (string)$X->temperature[1] . ' &deg;C</strong>';
+    $conditions['ydayprecip'] = $Legends['precip'] . ': <strong>' .
+      (string)$X->precip . ' mm</strong>';
+  }
+  */
 
-if(isset($xml->almanac->temperature[0])) {
-	
-  foreach ($xml->almanac->temperature as $i => $X) {
-	  $item   = (string)$X['class'];
-		$unit   = (string)$X['units'];
-		$period = empty($X['period'])?'':(string)$X['period'];
-		$year   = empty($X['year'])?'':(string)$X['year'];
-		$value  = (string)$X;
-		if(empty($value)) {
-			$conditions[$item] = $Legends['na'].'||';
-		} else {
-		  $conditions[$item] = "$value $unit|$period|$year";
-		}
-	  if($doDebug) {
-			$Status .= "<!-- temperature item=$item unit=$unit period=$period year=$year value=$value -->\n";
-		}
+  /*
+      "riseSet": {
+        "set": {
+          "time12h": "6:13 pm",
+          "epochTimeRounded": "1729386000",
+          "time": "18:13"
+        },
+        "timeZone": "PDT",
+        "rise": {
+          "time12h": "7:41 am",
+          "epochTimeRounded": "1729346400",
+          "time": "7:41"
+        }
+      },
+  */
+  // extract the sunrise/sunset data	
+  $X = $JSON['riseSet'];
+  if(isset($X['rise']['time'])) {
+    $conditions['sunrise'] = $Legends['sunrise'] . ': <strong>' .
+      $X['rise']['time'] . '</strong>';
+    $conditions['sunset'] = $Legends['sunset'] . ': <strong>' .
+      $X['set']['time'] . '</strong>';
   }
 }
-if(isset($xml->almanac->precipitation[0])) {
-	
-  foreach ($xml->almanac->precipitation as $i => $X) {
-	  $item   = (string)$X['class'];
-		$unit   = (string)$X['units'];
-		$period = empty($X['period'])?'':(string)$X['period'];
-		$year   = empty($X['year'])?'':(string)$X['year'];
-		$value  = (string)$X; 
-		if(empty($value)) {
-			$conditions[$item] = $Legends['na'].'||';
-		} else {
-		  $conditions[$item] = "$value $unit|$period|$year";
-		}
-	  if($doDebug) {
-			$Status .= "<!-- precipitation item=$item unit=$unit period=$period year=$year value=$value -->\n";
-		}
-  }
-}
-
-if(isset($xml->almanac->pop)) {
-	  $conditions['almanacpop'] = (string)$xml->almanac->pop;
-		if(empty($conditions['almanacpop'])) {
-			$conditions['almanacpop'] = $Legends['na'].'||';
-		} else {
-		  $conditions['almanacpop'] .= ' %||';
-		}
-
-}
+// Almanac info is not available in new JSON data
 
 // change conditions back to ISO-8859-1 if needed
 
@@ -927,155 +946,79 @@ if($doIconv) {
 }
 
 $Status .= "<!-- conditions\n" . print_r($conditions,true) . " -->\n";
-/*  Old example (in English)
-(
-    [cityobserved] => Observed at: <strong>Montréal-Trudeau Int'l Airport</strong>
-    [obsdate] => Date: <strong>1:00 PM EDT Thursday 27 October 2016</strong>
-    [citycondition] => <strong>Mostly Cloudy</strong>
-    [pressure] => Pressure: <strong>102.9 kPa</strong>
-    [tendency] => Tendency: <strong>Falling</strong>
-    [temperature] => Temperature: <strong>4.8&deg;C</strong>
-    [dewpoint] => Dew point: <strong>-2.3&deg;C</strong>
-    [humidity] => Humidity: <strong>60%</strong>
-    [wind] => Wind: <strong>E 22 km/h</strong>
-    [visibility] => Visibility: <strong>24 km</strong>
-    [maxmin] => Normals: <strong>Max 9&deg;C. Min 1&deg;C.</strong>
-    [sunrise] => Sunrise: <strong>7:27 EDT</strong>
-    [sunset] => Sunset: <strong>17:49 EDT</strong>
-    [icon] => 03.png
-    [ydayheading] => Yesterday's Data
-    [ydaymaxtemp] => Max: <strong>3.4&deg;C</strong>
-    [ydaymintemp] => Min: <strong>-0.8&deg;C</strong>
-    [ydayprecip] => Rainfall: <strong>Trace</strong>
-    [ydaysnow] => Snowfall: <strong>0.1 cm</strong>
-	
-Note: moonrise/moonset, aqhi, tendency no longer available
-
-Array (new from XML, French example)
-(
-    [cityobserved] => Observed at: <strong>Hamilton Munro Int'l Airport</strong>
-    [obsdate] => Date: <strong>Friday September 22, 2017 at 17:00 EDT</strong>
-    [citycondition] => <strong>Mainly Sunny</strong>
-    [pressure] => Pressure: <strong>101.9 kPa</strong>
-    [tendency] => Tendency: <strong>falling</strong>
-    [temperature] => Temperature: <strong>25.4 &deg;C</strong>
-    [dewpoint] => Dew point: <strong>16.0 &deg;C</strong>
-    [humidity] => Humidity: <strong>55 %</strong>
-    [wind] => Wind: <strong>ENE 11 km/h</strong>
-    [humidex] => Humidex: <strong>30</strong>
-    [visibility] => Visibility: <strong>19.3 km</strong>
-    [icon] => 01.png
-    [maxmin] => Normals: Max <strong>19&deg;C</strong> Min <strong>9&deg;C</strong>
-    [ydayheading] => Yesterday
-    [ydaymaxtemp] => Max: <strong>27.0 &deg;C</strong>
-    [ydaymintemp] => Min: <strong>14.2 &deg;C</strong>
-    [ydayprecip] => Rainfall: <strong>0.0 mm</strong>
-    [sunrise] => Sunrise: <strong>07:07</strong>
-    [sunset] => Sunset: <strong>19:18</strong>
-    [extremeMax] => 28.9 C|1960-2011|1965
-    [extremeMin] => 0.6 C|1960-2011|1999
-    [normalMax] => 19.5 C||
-    [normalMin] => 9.0 C||
-    [normalMean] => 14.3 C||
-    [extremeRainfall] => 44.5 mm|1960-2011|1989
-    [extremeSnowfall] => 0.0 cm|1960-2011|1960
-    [extremePrecipitation] => 44.5 mm|1960-2011|1989
-    [extremeSnowOnGround] => 0.0 cm|1970-2010|1970
-    [almanacpop] => 37.0||
-)
-
-*/
 
 //---------------------------------------------------------------------------------------------
 // Process the Hourly Forecast (if availablel)
 /*
-  <hourlyForecastGroup>
-    <dateTime name="forecastIssue" zone="UTC" UTCOffset="0">
-      <year>2017</year>
-      <month name="September">09</month>
-      <day name="Monday">25</day>
-      <hour>15</hour>
-      <minute>00</minute>
-      <timeStamp>20170925150000</timeStamp>
-      <textSummary>Monday September 25, 2017 at 15:00 UTC</textSummary>
-    </dateTime>
-    <dateTime name="forecastIssue" zone="EDT" UTCOffset="-4">
-      <year>2017</year>
-      <month name="September">09</month>
-      <day name="Monday">25</day>
-      <hour>11</hour>
-      <minute>00</minute>
-      <timeStamp>20170925110000</timeStamp>
-      <textSummary>Monday September 25, 2017 at 11:00 EDT</textSummary>
-    </dateTime>
-    <hourlyForecast dateTimeUTC="201709251900">
-      <condition>Mainly sunny</condition>
-      <iconCode format="png">01</iconCode>
-      <temperature unitType="metric" units="C">30</temperature>
-      <lop category="Nil" units="%">0</lop>
-      <windChill unitType="metric"/>
-      <humidex unitType="metric">38</humidex>
-      <wind>
-        <speed unitType="metric" units="km/h">10</speed>
-        <direction windDirFull="Southeast">SE</direction>
-        <gust unitType="metric" units="km/h"/>
-      </wind>
-    </hourlyForecast>
+    "hourlyFcst": {
+      "hourlyIssuedTimeShrt": "5:00 AM PDT",
+      "hourly": [
+        {
+          "date": "19 October 2024",
+          "periodID": 0,
+          "windGust": {
+            "metric": "",
+            "imperial": ""
+          },
+          "windDir": "SE",
+          "feelsLike": {
+            "metric": "",
+            "imperial": ""
+          },
+          "condition": "Rain at times heavy",
+          "precip": "100",
+          "temperature": {
+            "metric": "14",
+            "imperial": "57"
+          },
+          "iconCode": "13",
+          "time": "7 AM",
+          "windSpeed": {
+            "metric": "30",
+            "imperial": "19"
+          },
+          "epochTime": 1729346400,
+          "dateShrt": "19 Oct"
+        },
+
 */
 
-if(isset($xml->hourlyForecastGroup)) {
-  $UTCOffset = (integer)$xml->hourlyForecastGroup->dateTime[1]['UTCOffset'];
-	$TZabbr    = (string)$xml->hourlyForecastGroup->dateTime[1]['zone'];
-	$UOMTempUsed = "&deg;".(string)$xml->hourlyForecastGroup->hourlyForecast[0]->temperature['units'];
-	$UOMWindUsed = (string)$xml->hourlyForecastGroup->hourlyForecast[0]->wind->speed['units'];
+if(isset($JSON['hourlyFcst']['hourly'][0])) {
+	$UOMTempUsed = "&deg;C";
+	$UOMWindUsed = 'km/h';
 	$n = 0;
 	$forecasthours['haveWindChill'] = false; // assume no Humidex found
 	$forecasthours['haveHumidex'] = false;   // assume no WindChill found
-	$forecasthours['TZ'] = $TZabbr;
+	#$forecasthours['TZ'] = $TZabbr;
 	$forecasthours['tempUOM'] = $UOMTempUsed;
 	$forecasthours['windUOM'] = $UOMWindUsed;
-	
-	foreach ($xml->hourlyForecastGroup->hourlyForecast as $i => $X) {
-		$forecasthours[$n]['UTCstring'] = (string)$X['dateTimeUTC'];
-		$tDateTime = gmdate('Y-m-d H:i',
-		  ECF_get_time( $forecasthours[$n]['UTCstring'], $UTCOffset));
-		list($forecasthours[$n]['date'],$forecasthours[$n]['time']) = 
-		   explode(' ',$tDateTime);
-		list($forecasthours[$n]['year'],$tM,$forecasthours[$n]['day']) = 
-		   explode('-',$forecasthours[$n]['date']);
-		//$Status .= "<!-- tM='$tM' -->\n";
-		$forecasthours[$n]['month'] = $tM;
-		$forecasthours[$n]['monthname'] = $MonthNames[$tM];
-		if($doIconv) {
-			$forecasthours[$n]['monthname'] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',
-			    $forecasthours[$n]['monthname']);
-		}
-		$forecasthours[$n]['day'] = preg_replace('|^0|','',$forecasthours[$n]['day']);
-		$forecasthours[$n]['TZ'] = $TZabbr;
-		$forecasthours[$n]['cond'] = (string)$X->condition;
+	$lastDateShrt = '';
+	foreach ($JSON['hourlyFcst']['hourly'] as $i => $X) {
+    if(isset($X['date'])) {$lastDateShrt = (string)$X['date'];}
+		$forecasthours[$n]['UTCstring'] = (string)$X['epochTime'];
+    $forecasthours[$n]['date'] = $lastDateShrt;
+    $forecasthours[$n]['time'] = (string)$X['time'];
+		$forecasthours[$n]['cond'] = (string)$X['condition'];
 		if($doIconv) {
 			$forecasthours[$n]['cond'] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',
 			    $forecasthours[$n]['cond']);
 		}
-		$forecasthours[$n]['icon'] = ECF_replace_icon((string)$X->iconCode,(string)$X->lop);
-		$forecasthours[$n]['lop']  = (string)$X->lop['category'];  // likelyhood of precipitation
-		if($doIconv) {
-			$forecasthours[$n]['lop'] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',
-			    $forecasthours[$n]['lop']);
-		}
-		$forecasthours[$n]['pop']  = (string)$X->lop; // actual PoP if any
-		$forecasthours[$n]['temp'] = (string)$X->temperature;
-		$forecasthours[$n]['wind'] = (string)$X->wind->direction." ".(string)$X->wind->speed;
-		if(isset($X->wind->gust) and strlen((string)$X->wind->gust)>0) {
-			$forecasthours[$n]['wind'] .= ' ' . $Legends['gust'] . ' ' . (string)$X->wind->gust;
+		$forecasthours[$n]['icon'] = ECF_replace_icon((string)$X['iconCode'],(string)$X['precip']);
+		$forecasthours[$n]['lop']  = (string)$X['precip'];  // likelyhood of precipitation
+		
+    $forecasthours[$n]['pop']  = (string)$X['precip']; // actual PoP if any
+		$forecasthours[$n]['temp'] = (string)$X['temperature']['metric'];
+		$forecasthours[$n]['wind'] = (string)$X['windDir']." ".(string)$X['windSpeed']['metric'];
+		if(isset($X['windGust']['metric']) and strlen((string)$X['windGust']['metric'])>0) {
+			$forecasthours[$n]['wind'] .= ' ' . $Legends['gust'] . ' ' . (string)$X['windGust']['metric'];
 		}
 
-		if(!empty($X->windChill)) {
-			$forecasthours[$n]['windchill'] = (string)$X->windChill;
+		if(!empty($X['windChill'])) {
+			$forecasthours[$n]['windchill'] = (string)$X['windChill'];
 			$forecasthours['haveWindChill'] = true;
 		}
-		if(!empty($X->humidex)) {
-			$forecasthours[$n]['humidex'] = (string)$X->humidex;
+		if(!empty($X['humidex'])) {
+			$forecasthours[$n]['humidex'] = (string)$X['humidex'];
 			$forecasthours['haveHumidex'] = true;
 		}
 		$n++;
@@ -1083,131 +1026,126 @@ if(isset($xml->hourlyForecastGroup)) {
 }
 // end Hourly Forecast processing
 if($doDebug) {
-  $Status .= "<!-- hourlyForecast UOMtemp='$UOMTempUsed' UOMwind='$UOMWindUsed' UTCOffset='$UTCOffset'" .
-           " hrs TZabbr='$TZabbr' -->\n";
+  $Status .= "<!-- hourlyForecast UOMtemp='$UOMTempUsed' UOMwind='$UOMWindUsed' -->\n";
   $Status .= "<!-- forecasthours\n".print_r($forecasthours,true)." -->\n";
 }
 
 //---------------------------------------------------------------------------------------------
-// process the forecast days
 
-
+// process the daily forecast periods
 $i = 0;
 $foundAbnormal = 0;  // No abnormal indicators in XML (so far)
 $alertstring = '';
 
 // get forecast issued date
-if(isset($xml->forecastGroup->dateTime[1]->textSummary)) {
-	$updated = $Legends['issued'].': '.(string)$xml->forecastGroup->dateTime[1]->textSummary;
+if(isset($JSON['dailyFcst']['dailyIssuedTime'])) {
+	$updated = $Legends['issued'].': '.(string)$JSON['dailyFcst']['dailyIssuedTime'];
 	if($doIconv) {
 		$updated = iconv($charsetInput,$charsetOutput.'//TRANSLIT',ECF_UTF_CLEANUP($updated));
 	}
 	$Status .= "<!-- forecast '$updated' -->\n";
 }
 // get the official location name
-if(isset($xml->location->name)) {
-	$title = (string)$xml->location->name . ', ' . strtoupper((string)$xml->location->province['code']);
+if(isset($JSON['displayName'])) {
+	$title = (string)$JSON['displayName'] . ', ' . strtoupper($JSON['province']);
 	if($doIconv) {
 		$title = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$title);
 	}
 }
 
-// process the forecast periods
-foreach ($xml->forecastGroup->forecast as $idx => $X) {
-/*
-    [period] => ce soir et cette nuit
-    [textSummary] => Partiellement nuageux avec 40 pour cent de probabilitÃ© d'averses. Risque d'un orage tÃ´t ce soir. Nappes de brouillard se formant au cours de la nuit. Minimum 17.
-    [cloudPrecip] => SimpleXMLElement Object
-        (
-            [textSummary] => Partiellement nuageux avec 40 pour cent de probabilitÃ© d'averses. Risque d'un orage tÃ´t
-ce soir.
-        )
+if(isset($JSON['dailyFcst']['daily'])) {
+  foreach ($JSON['dailyFcst']['daily'] as $idx => $X) {
+  /*
+      "dailyFcst": {
+        "dailyIssuedTimeShrt": "5:00 AM PDT",
+        "regionalNormals": {
+          "metric": {
+            "highTemp": 13,
+            "lowTemp": 6,
+            "text": "Low 6. High 13."
+          },
+          "imperial": {
+            "highTemp": 55,
+            "lowTemp": 43,
+            "text": "Low 6. High 13."
+          }
+        },
+        "daily": [{
+            "date": "Sat, 19 Oct",
+            "summary": "Rain at times heavy",
+            "periodID": 1,
+            "periodLabel": "Today",
+            "windChill": {
+              "calculated": [],
+              "textSummary": ""
+            },
+            "sun": {
+              "value": "0",
+              "units": "hours"
+            },
+            "temperatureText": "High 15.",
+            "humidex": [],
+            "precip": "",
+            "frost": {
+              "textSummary": ""
+            },
+            "titleText": "Today: Rain at times heavy. High 15.",
+            "temperature": {
+              "periodHigh": 15,
+              "metric": "15",
+              "imperial": "59"
+            },
+            "iconCode": "13",
+            "text": "Rain at times heavy. Amount 30 to 40 mm. Wind southeast 30 km\/h except gusting to 60 near the water. High 15. UV index 1 or low."
+          }, ...
+  */	
+    $forecasticon[$i] = (string)$X['iconCode'];
+    $forecasttext[$i] = (string)$X['summary'];
+    $forecastpop[$i]  = (string)$X['precip'];
+    $forecasticon[$i] = ECF_replace_icon($forecasticon[$i],$forecastpop[$i]);
 
-    [abbreviatedForecast] => SimpleXMLElement Object
-        (
-            [iconCode] => 39
-            [pop] => 40
-            [textSummary] => PossibilitÃ© d'averses
-        )
+    $tSummary = (string)$X['summary'];
+    $forecasttemp[$i] = (string)$X['temperature']['metric'];
+    if(isset($X['temperature']['periodHigh'])) {
+      $forecasttemp[$i] ='Max: '.$forecasttemp[$i];
+      } else {
+      $forecasttemp[$i] ='Min: '.$forecasttemp[$i];}
+    $tAbn = '';
+    $forecasttempabn[$i] = '';
+    if(preg_match('!( rising | falling | hausse | baisse )!i',$tSummary)) {
+      $tAbn = ' <strong>*</strong>';
+      $foundAbnormal++;
+    }
+    $forecasttemptype[$i] = strtolower(substr((string)$X['temperatureText'],0,3));
+    $forecasttemptype[$i] = str_replace('low','min',$forecasttemptype[$i]);
+    $forecasttemptype[$i] = str_replace('hig','max',$forecasttemptype[$i]);
+    $forecasttempabn[$i]  = $tAbn;
+      $t = '<span style="color:'; 
+      $t .= ($forecasttemptype[$i] == 'min')?'#00f':'#f00';
+      $t .= '"><b>'.$forecasttemp[$i].'&deg;C</b></span>';
+      $t .= $forecasttempabn[$i]."<br/>";
+    $forecasttemp[$i] = $t;
 
-    [temperatures] => SimpleXMLElement Object
-        (
-            [textSummary] => Minimum 17.
-            [temperature] => 17
-        )
+    $forecasttitles[$i] = (string)$X['periodLabel'];
+    $forecastdetail[$i] = (string)$X['text'];
+    $forecastdays[$i]   = (string)$X['periodLabel'];
 
-    [winds] => SimpleXMLElement Object
-        (
-        )
-
-    [precipitation] => SimpleXMLElement Object
-        (
-            [textSummary] => SimpleXMLElement Object
-                (
-                )
-
-            [precipType] => pluie
-        )
-
-    [visibility] => SimpleXMLElement Object
-        (
-            [otherVisib] => SimpleXMLElement Object
-                (
-                    [@attributes] => Array
-                        (
-                            [cause] => other
-                        )
-
-                    [textSummary] => Nappes de brouillard se formant au cours de la nuit.
-                )
-
-        )
-
-    [relativeHumidity] => 90
-)
-*/	
-  $forecasticon[$i] = (string)$X->abbreviatedForecast->iconCode;
-	$forecasttext[$i] = (string)$X->abbreviatedForecast->textSummary;
-	$forecastpop[$i]  = (string)$X->abbreviatedForecast->pop;
-	$forecasticon[$i] = ECF_replace_icon($forecasticon[$i],$forecastpop[$i]);
-
-	$tSummary = (string)$X->temperatures->textSummary;
-	$forecasttemp[$i] = (string)$X->temperatures->temperature;
-	$tAbn = '';
-	$forecasttempabn[$i] = '';
-	if(preg_match('!( rising | falling | hausse | baisse )!i',$tSummary)) {
-		$tAbn = ' <strong>*</strong>';
-		$foundAbnormal++;
-	}
-	$forecasttemptype[$i] = strtolower(substr((string)$X->temperatures->temperature['class'],0,3));
-	$forecasttemptype[$i] = str_replace('low','min',$forecasttemptype[$i]);
-	$forecasttemptype[$i] = str_replace('hig','max',$forecasttemptype[$i]);
-	$forecasttempabn[$i]  = $tAbn;
-		$t = ucfirst($forecasttemptype[$i]).': <span style="color:'; 
-		$t .= ($forecasttemptype[$i] == 'min')?'#00f':'#f00';
-		$t .= '"><b>'.$forecasttemp[$i].'&deg;C</b></span>';
-		$t .= $forecasttempabn[$i]."<br/>";
-	$forecasttemp[$i] = $t;
-
-	$forecasttitles[$i] = (string)$X->period;
-	$forecastdetail[$i] = (string)$X->textSummary;
-	$forecastdays[$i]   = (string)$X->period['textForecastName'];
-	
-	//print "i=$i\n".print_r($X,true)."\n--------\n";
-	$i++;
-}
-
-// fix the charset if needed
-if($doIconv) {
-  for ($i=0;$i<count($forecasttext);$i++) {
-	  $forecasttext[$i] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',
-		                          ECF_UTF_CLEANUP($forecasttext[$i])); 
-		$forecasttitles[$i] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$forecasttitles[$i]); 
-	  $forecastdetail[$i] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',
-		                            ECF_UTF_CLEANUP($forecastdetail[$i]));
-		$forecastdays[$i]   = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$forecastdays[$i]); 
+    //print "i=$i\n".print_r($X,true)."\n--------\n";
+    $i++;
   }
-	$Status .= "<!-- converted output to $charsetOutput -->\n";
+
+  // fix the charset if needed
+  if($doIconv) {
+    for ($i=0;$i<count($forecasttext);$i++) {
+      $forecasttext[$i] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',
+                                ECF_UTF_CLEANUP($forecasttext[$i])); 
+      $forecasttitles[$i] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$forecasttitles[$i]); 
+      $forecastdetail[$i] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',
+                                  ECF_UTF_CLEANUP($forecastdetail[$i]));
+      $forecastdays[$i]   = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$forecastdays[$i]); 
+    }
+    $Status .= "<!-- converted output to $charsetOutput -->\n";
+  }
 }
 
 if($doDebug) {
@@ -1220,64 +1158,7 @@ if($doDebug) {
 	$Status .= "<!-- forecasttext \n".print_r($forecasttext,true)." -->\n";
 	$Status .= "<!-- forecastdetail \n".print_r($forecastdetail,true)." -->\n";
 }
-// end forecast period processing
-
-//---------------------------------------------------------------------------------------------
-// generate the alerts display
-/*
-  <warnings url="http://weather.gc.ca/warnings/report_f.html?ab10">
-    <event type="warning" priority="high" description="AVERTISSEMENT DE PLUIE EN VIGUEUR">
-      <dateTime name="eventIssue" zone="UTC" UTCOffset="0">
-        <year>2017</year>
-        <month name="septembre">09</month>
-        <day name="mercredi">20</day>
-        <hour>03</hour>
-        <minute>28</minute>
-        <timeStamp>20170920032800</timeStamp>
-        <textSummary>20 septembre 2017 03h28 UTC</textSummary>
-      </dateTime>
-      <dateTime name="eventIssue" zone="HAR" UTCOffset="-6">
-        <year>2017</year>
-        <month name="septembre">09</month>
-        <day name="mardi">19</day>
-        <hour>21</hour>
-        <minute>28</minute>
-        <timeStamp>20170919212800</timeStamp>
-        <textSummary>19 septembre 2017 21h28 HAR</textSummary>
-      </dateTime>
-    </event>
-  </warnings>
-
-*/
-
-$X = $xml->warnings;
-if($doDebug) {$Status .= "<!-- raw warnings\n".print_r($X,true)." -->\n";}
-
-if (isset($X['url'])) { // got one (or more) alerts
-	$aURL = str_replace('http://','https://',(string)$X['url']);
-  // accumulate all the alert data from the <event> info
-	for ($i=0;$i<count($X->event); $i++) {
-    $alerttype[$i] = (string)$X->event[$i]['type'];
-    $alerts[$i]    = (string)$X->event[$i]['description'];
-		if($doIconv) {
-			$alerts[$i] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',
-			                    ECF_UTF_CLEANUP($alerts[$i]));
-		}
-	}
-} 
-
-if (isset($alerts[0])) { // combine alerts of the same type
-  foreach($alerttype as $i => $atype) {
-    $alertlinks[$atype][] = $aURL;
-    $alertlinkstext[$atype][] = $alerts[$i];
-  }
-}
-
-if($doDebug) { 
-   $Status .= "<!-- alertlinks\n" . print_r($alertlinks,true) . "-->\n";
-   $Status .= "<!-- alertlinkstext\n" . print_r($alertlinkstext,true) . "-->\n";
-}
-// end of alerts processing
+// end daily forecast period processing
 
 //---------------------------------------------------------------------------------------------
 // generate the HTML from the extracted data
@@ -1399,7 +1280,7 @@ if (isset($conditions['cityobserved']) ) { // only generate if we have the data
 // end of current conditions mods
 
 //---------------------------------------------------------------------------------------------
-// Generate the $almanac HTML
+// Generate the $almanac HTML (note: data not present in JSON.. left this in case it appears in the future)
 
 if(isset($conditions['extremeMax']) and strlen($conditions['extremeMax']) > 3 ) { // got any almanac? 
   $almanacList = array(
@@ -1441,24 +1322,30 @@ if(isset($conditions['extremeMax']) and strlen($conditions['extremeMax']) > 3 ) 
 	}
 	$almanac .= "</table>\n";
 
-
-
 } // end of $almanac HTML generation
 
 //---------------------------------------------------------------------------------------------
 // generate the HTML for the 24hr forecast table display
+
 if(count($forecasthours) > 0) {
 	$tCols = 5;
 	if($forecasthours['haveHumidex'] or $forecasthours['haveWindChill']) { $tCols++; }
   $nonSigFound = false;
 	$tDateLast = '';
 	$forecast24h = '<div class="ECforecast">'."\n";
-	$forecast24h .= '<h2>'.$Legends['forecast24']." - $title</h2>\n";
+  $tTitle = $Legends['forecast24']." - $title";
+  if($doIconv) {
+    $tTitle = @iconv($charsetInput,$charsetOutput."//TRANSLIT",ECF_UTF_CLEANUP($tTitle));
+  }
+	$forecast24h .= '<h2>'.$tTitle."</h2>\n";
   $forecast24h .= '<table class="ECtable" style="border: 1px solid">'."\n";
   $forecast24h .= "<tr>\n";
 	
-	$forecast24h .= ' <td class="table-top" style="text-align: center">'.$Legends['datetime'].'<br/>('.$forecasthours['TZ'].")</td>\n";
+	$forecast24h .= ' <td class="table-top" style="text-align: center">'.$Legends['datetime']."</td>\n";
 	$forecast24h .= ' <td class="table-top" style="text-align: center">'.$Legends['temperature'].'<br/>('.$forecasthours['tempUOM'].")</td>\n";
+  if($doIconv) {
+    $Legends['weatherconds'] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$Legends['weatherconds']);
+  }
 	$forecast24h .= ' <td class="table-top" style="text-align: center"><br/>'.$Legends['weatherconds']."</td>\n";
 	$forecast24h .= ' <td class="table-top" style="text-align: center"><br/>'.$Legends['lop']."</td>\n";
 	$forecast24h .= ' <td class="table-top" style="text-align: center">'.$Legends['wind'].'<br/>('.$forecasthours['windUOM'].")</td>\n";
@@ -1471,7 +1358,7 @@ if(count($forecasthours) > 0) {
 	}
 	
 	$forecast24h .= "</tr>\n";
-	
+	$tDateLast = '';
 	for($i=0;$i<24;$i++) {
 		// generate the detail line for the hour
 		$F = $forecasthours[$i];
@@ -1479,11 +1366,6 @@ if(count($forecasthours) > 0) {
 		[UTCstring] => 201709262000
 		[time] => 16:00
 		[date] => 2017-09-26
-		[day] => 26
-		[year] => 2017
-		[month] => 09
-		[monthname] => septembre
-		[TZ] => HAE
 		[cond] => Généralement ensoleillé
 		[icon] => 01
 		[lop] => Nulle
@@ -1495,7 +1377,7 @@ if(count($forecasthours) > 0) {
     $t = '';
     if($tDateLast !== $F['date']) {
 			$t .= '<tr><td class="table-top" colspan="'.$tCols.'"  style="text-align: left">'.
-			  $F['day'].' '.$F['monthname'].' '.$F['year'].
+			  $F['date'].
 				'</td></tr>'."\n";
 		  $tDateLast = $F['date'];
 		}
@@ -1549,96 +1431,101 @@ if(count($forecasthours) > 0) {
 	$forecast24h .= ' <td colspan="'.$tCols.'">&nbsp;</td>'."\n";
   $forecast24h .= "</tr>\n";
 	$forecast24h .= "<tr>\n";
+  if($doIconv) {
+    $Legends['lopnote'] = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$Legends['lopnote']);
+  }
 	$forecast24h .= ' <td colspan="'.$tCols.'">'.
 	  $Legends['lopnote']."</td>\n";
   $forecast24h .= "</tr>\n";
 	if($nonSigFound) {
 		$forecast24h .= "<tr>\n";
-		$forecast24h .= ' <td colspan="'.$tCols.'"">'.
+ 		$forecast24h .= ' <td colspan="'.$tCols.'"">'.
 			$Legends['nonsig']."</td>\n";
 		$forecast24h .= "</tr>\n";
 	}
 	$forecast24h .= "</table>\n</div><!-- end of 24hr forecast table -->\n";
 	if($doIconv) {
-		$forecast24h = iconv($charsetInput,$charsetOutput.'//TRANSLIT',ECF_UTF_CLEANUP($forecast24h));
+		#$forecast24h = iconv($charsetInput,$charsetOutput.'//TRANSLIT',$forecast24h);
 	}
 } // end generate HTML for 24hr forecast table display
 
 //---------------------------------------------------------------------------------------------
 // now format the forecast for display
- 	
-//-----------------------------------------------------------------------------	
-// calc the width percentage based on number of icons to display
-$wdth = intval(100/(count($forecasticon)/2));
-// set the legend
-$weather7days = ($Lang=='fr')?'Prévisions':'Extended Forecast';
-  
-// now make the table
-$weather = '<div class="ECforecast">'."\n";
-$weather .= '<table class="ECtable">'."\n";
-$weather .= "<tr>\n";
-$weather .= '<td colspan="7" class="table-top">&nbsp;'.$weather7days." - $ECNAME</td>\n";
-$weather .= "</tr>\n";
 
-$weather .= "<tr>\n";
+if (count($forecasticon) > 0) {
+  //-----------------------------------------------------------------------------	
+  // calc the width percentage based on number of icons to display
 
-$tweather = array();
+  $wdth = intval(100/(count($forecasticon)/2));
+  // set the legend
+  $weather7days = ($Lang=='fr')?'Prévisions':'Extended Forecast';
 
-// generate the icon for each period  
-foreach ($forecasticon as $i => $v) {
-		
-	$tweather[$i] = '<!-- '.$i.' --><td style="width: '.$wdth.'%; text-align: center; vertical-align: top;"><b>'.
-  $forecasttitles[$i]."</b>\n";
-  $alttext = $forecasttext[$i];
-	if ($forecastpop[$i] <> '') {
-		$alttext .= " (" . $forecastpop[$i] ."%)";
-	}
-	$forecasticon[$i] = 
-	  "    <img src=\"$imagedirEC" . $forecasticon[$i] .
-		"\"\n" .
-		"     height=\"51\" width=\"60\" \n" . 
-		"     alt=\"$alttext\"\n" .
-		"     title=\"".$forecastdetail[$i]."\" /> <br/>\n";
-	$tweather[$i] .= "<br/>" . $forecasticon[$i] . "\n";
-	$tweather[$i] .= "    " . $forecasttext[$i] . "<br/>\n";
-	$tweather[$i] .= "    " . $forecasttemp[$i] . "\n";
-	$tweather[$i] .= "  </td>\n";
-	 
-	$forecast[$i] = 
-		$forecasttitles[$i] . "<br/>\n" .
-		$forecasticon[$i] . "<br/>\n" .
-		$forecasttext[$i] . "<br/>\n" .
-		$forecasttemp[$i] . "\n";
+  // now make the table
+  $weather = '<div class="ECforecast">'."\n";
+  $weather .= '<table class="ECtable">'."\n";
+  $weather .= "<tr>\n";
+  $weather .= '<td colspan="7" class="table-top">&nbsp;'.$weather7days." - $ECNAME</td>\n";
+  $weather .= "</tr>\n";
 
-} // end generate forecast icons in $tweather array
- 
-// now loop over the $tweather array to build the two table rows with icons
- 
-if($forecasttemptype[0] == 'min') { $iStart = -1; } else { $iStart = 0; }
- 
-for ($i=0;$i<=count($tweather);$i=$i+2) {
- if(isset($tweather[$i+$iStart])) {
-	 $weather .= $tweather[$i+$iStart];
- } else {
-	 $weather .= '<td style="width: '.$wdth.'%; text-align: center; vertical-align: top;">';
-	 $weather .= "&nbsp;\n</td>\n";
- }
+  $weather .= "<tr>\n";
+
+  $tweather = array();
+
+  // generate the icon for each period  
+  foreach ($forecasticon as $i => $v) {
+
+    $tweather[$i] = '<!-- '.$i.' --><td style="width: '.$wdth.'%; text-align: center; vertical-align: top;"><b>'.
+    $forecasttitles[$i]."</b>\n";
+    $alttext = $forecasttext[$i];
+    if ($forecastpop[$i] <> '') {
+      $alttext .= " (" . $forecastpop[$i] ."%)";
+    }
+    $forecasticon[$i] = 
+      "    <img src=\"$imagedirEC" . $forecasticon[$i] .
+      "\"\n" .
+      "     height=\"51\" width=\"60\" \n" . 
+      "     alt=\"$alttext\"\n" .
+      "     title=\"".$forecastdetail[$i]."\" /> <br/>\n";
+    $tweather[$i] .= "<br/>" . $forecasticon[$i] . "\n";
+    $tweather[$i] .= "    " . $forecasttext[$i] . "<br/>\n";
+    $tweather[$i] .= "    " . $forecasttemp[$i] . "\n";
+    $tweather[$i] .= "  </td>\n";
+
+    $forecast[$i] = 
+      $forecasttitles[$i] . "<br/>\n" .
+      $forecasticon[$i] . "<br/>\n" .
+      $forecasttext[$i] . "<br/>\n" .
+      $forecasttemp[$i] . "\n";
+
+  } // end generate forecast icons in $tweather array
+
+  // now loop over the $tweather array to build the two table rows with icons
+
+  if($forecasttemptype[0] == 'min') { $iStart = -1; } else { $iStart = 0; }
+
+  for ($i=0;$i<=count($tweather);$i=$i+2) {
+   if(isset($tweather[$i+$iStart])) {
+     $weather .= $tweather[$i+$iStart];
+   } else {
+     $weather .= '<td style="width: '.$wdth.'%; text-align: center; vertical-align: top;">';
+     $weather .= "&nbsp;\n</td>\n";
+   }
+  }
+
+  $weather .= "</tr>\n<tr>\n";
+
+  for ($i=1;$i<=count($tweather);$i=$i+2) {
+   if(isset($tweather[$i+$iStart])) {
+     $weather .= $tweather[$i+$iStart];
+   } else {
+     $weather .= '<td style="width: '.$wdth.'%; text-align: center; vertical-align: top;">';
+     $weather .= "&nbsp;\n</td>\n";
+   }
+  }
+
+  $weather .= "</tr>\n</table>\n";
+  $weather .= "</div>\n\n";
 }
- 
-$weather .= "</tr>\n<tr>\n";
-
-for ($i=1;$i<=count($tweather);$i=$i+2) {
- if(isset($tweather[$i+$iStart])) {
-	 $weather .= $tweather[$i+$iStart];
- } else {
-	 $weather .= '<td style="width: '.$wdth.'%; text-align: center; vertical-align: top;">';
-	 $weather .= "&nbsp;\n</td>\n";
- }
-}
-   
-$weather .= "</tr>\n</table>\n";
-$weather .= "</div>\n\n";
-
 
 /* note: finish styling of alert links in your .css by adding:
  
@@ -1673,63 +1560,208 @@ $weather .= "</div>\n\n";
 */
 
 //---------------------------------------------------------------------------------------------
-// finish processing alerts HTML
+// process alerts JSON and generate HTML
 
-if (count($alertlinks) > 0) { // create the $alertstring HTML if there are alert(s)
+if (isset($JSON['alert']['zoneId'])) { // create the $alertstring HTML if there are alert(s)
+  
+  /*
+        "alerts": [
+        {
+          "type": "warning",
+          "sequence": 0,
+          "status": "active",
+          "transitionStatus": "continued",
+          "issueTime": "2024-10-19T12:05:50.504Z",
+          "timezone": "PDT",
+          "issueTimeText": "5:05 a.m. PDT Saturday 19 October 2024",
+          "issuingOfficeTZ": "PDT",
+          "expiryTime": "2024-10-20T04:05:50.504Z",
+          "eventOnsetTime": "2024-10-19T11:50:00.000Z",
+          "eventEndTime": "2024-10-20T23:40:00.000Z",
+          "alertId": "1956382241999583092202410170502",
+          "alertCode": "RFW",
+          "program": "public",
+          "alertBannerText": "Rainfall Warning",
+          "alertHeaderText": "Rainfall Warning in effect for:",
+          "bannerColour": "#b40000",
+          "zoneId": "loc1-2573",
+          "zones": [
+            "Metro Vancouver - central including the City of Vancouver Burnaby and New Westminster"
+          ],
+          "text": "Heavy rain continues for most of the weekend.\n\nWhere: Metro Vancouver, western and central Fraser Valley, Howe Sound, and Whistler.\n\nWhen: Now to Sunday.  \n\nWhat: Storm totals of 90 to 150 mm are expected in Metro Vancouver and parts of the Fraser Valley, with higher amounts potentially exceeding 180 mm over the North Shore Mountains. In the Sea-to-Sky corridor, totals of 90 to 150 mm are possible.\n\nHazards: \n- Water pooling on roads \n- Swollen rivers and creeks \n- Minor coastal flooding  \n\nRemarks: A strong fall storm system will direct an atmospheric river towards the South Coast, bringing heavy rain to the region. The heavy rain will continue today, then ease somewhat tonight. A second pulse of rain is expected Sunday before the rain ends late Sunday.\n\nEnsure that drains are clear of leaves and debris and secure loose objects out-of-doors.\n\nKeep up to date with the latest advisories from the River Forecast Centre at: \nhttps://bcrfc.env.gov.bc.ca/warnings/index.htm\n\nHeavy downpours can cause flash floods and water pooling on roads. Localized flooding in low-lying areas is possible.\n\nIf visibility is reduced while driving, turn on your lights and maintain a safe following distance.\n\nPlease continue to monitor alerts and forecasts issued by Environment Canada. To report severe weather, send an email to BCstorm@ec.gc.ca or tweet reports using #BCStorm.",
+          "special_text": [
+            {
+              "type": "email",
+              "link": "BCstorm@ec.gc.ca"
+            },
+            {
+              "type": "hashtag",
+              "link": "#BCStorm",
+              "alias": "#BCStorm "
+            }
+          ],
+          "tcisURL": ""
+        }
+      ],
+      "hwyAlerts": [
+        {
+          "type": "warning",
+          "sequence": 0,
+          "status": "active",
+          "transitionStatus": "continued",
+          "issueTime": "2024-10-19T12:05:50.504Z",
+          "timezone": "PDT",
+          "issueTimeText": "5:05 a.m. PDT Saturday 19 October 2024",
+          "issuingOfficeTZ": "PDT",
+          "expiryTime": "2024-10-20T04:05:50.504Z",
+          "eventOnsetTime": "2024-10-19T11:50:00.000Z",
+          "eventEndTime": "2024-10-20T23:40:00.000Z",
+          "alertId": "1956382241999583092202410170502",
+          "alertCode": "RFW",
+          "program": "public",
+          "alertBannerText": "Rainfall Warning",
+          "alertHeaderText": "Rainfall Warning in effect for:",
+          "bannerColour": "#b40000",
+          "zoneId": "loc1-2522",
+          "zones": [
+            "Sea to Sky - Squamish to Whistler"
+          ],
+          "text": "stuff...",
+          "special_text": [
+            {
+              "type": "URL",
+              "link": "https://www.drivebc.ca/",
+              "alias": "drivebc.ca"
+            },
+            {
+              "type": "email",
+              "link": "BCstorm@ec.gc.ca"
+            },
+            {
+              "type": "hashtag",
+              "link": "#BCStorm",
+              "alias": "#BCStorm "
+            }
+          ],
+          "tcisURL": ""
+        },
+        {
+          "type": "statement",
+          "sequence": 1,
+          "status": "active",
+          "transitionStatus": "continued",
+          "issueTime": "2024-10-19T12:29:08.953Z",
+          "timezone": "PDT",
+          "issueTimeText": "5:29 a.m. PDT Saturday 19 October 2024",
+          "issuingOfficeTZ": "PDT",
+          "expiryTime": "2024-10-20T04:29:08.953Z",
+          "eventOnsetTime": "2024-10-19T11:50:00.000Z",
+          "eventEndTime": "2024-10-20T18:22:00.000Z",
+          "alertId": "1658233371150208147202410160502",
+          "alertCode": "SPS",
+          "program": "public",
+          "alertBannerText": "Special Weather Statement",
+          "alertHeaderText": "Special Weather Statement in effect for:",
+          "bannerColour": "#707070",
+          "zoneId": "loc1-2517",
+          "zones": [
+            "Coquihalla Highway - Hope to Merritt"
+          ],
+          "text": "stuff...",
+          "special_text": [
+            {
+              "type": "URL",
+              "link": "https://www.drivebc.ca/",
+              "alias": "drivebc.ca"
+            },
+            {
+              "type": "email",
+              "link": "BCstorm@ec.gc.ca"
+            },
+            {
+              "type": "hashtag",
+              "link": "#BCStorm",
+              "alias": "#BCStorm "
+            }
+          ],
+          "tcisURL": ""
+        }
+      ]
+    },
+*/
 
-  $alertstyles = array(
-    'warning' => 'color: white; background-color: #b00; border: 2px solid black;',
-    'watch'   => 'color: black; background-color: #ff0; border: 2px solid black;',
-	'statement' => 'color: white; background-color: #707070; border: 2px solid black;',
-    'ended'   => 'color: white; background-color: #6c6; border: 2px solid black;',
-    'noalert' => 'color: black; background-color: #fff; border: 2px solid black;',
-    'advisory' => 'color: white; background-color: #707070; border: 2px solid black;',
-  );
-
-
+  $alertstring = '';
   // group alerts by type and add to $alertstring
-
-	foreach ($alertlinks as $atype => $alist) { 
-		$alertstring .= '<p class="ECforecast EC'.$atype.'" 
-		style="'.$alertstyles[$atype].' padding: 5px;text-align: center;">'."\n";
-	
-		foreach ($alertlinks[$atype] as $g => $alks ) {
-			$alertstring .= '<b><a ' . $LINKtarget . 
-					' href="' . $alertlinks[$atype][$g] . '">  ' . 
-					$alertlinkstext[$atype][$g] . 
-					'  </a></b><br/>'."\n";
-		}
-		$alertstring .= "</p><!-- finished for type='$atype' alerts -->\n";
+  $XA = isset($JSON['alert']['alerts'])?$JSON['alert']['alerts']:array();
+  $n = 0;
+  $ecAlertFontSize = '130%';
+	foreach ($XA as $n => $A) { 
+    $alertstring .= format_alert($A,$n);
+    $n++;
 	}
+   
+  $XA = isset($JSON['alert']['hwyAlerts'])?$JSON['alert']['hwyAlerts']:array();
+	foreach ($XA as $n => $A) { 
+    $alertstring .= format_alert($A,$n);
+    $n++;
+	}
+  
+  if(strlen($alertstring) > 0) {
+    $alertstring .= "<script type=\"text/javascript\">
+  
+  function toggle_view(name) {
+ 		var element = document.getElementById(name);
+    var indic = document.getElementById(name+'_I');
+		if (! element ) { return; } 
+    var current = element.style.display;
+    if(current == 'none') {
+      element.style.display = 'inline';
+      if(indic) { indic.innerHTML = '&#9650;';}
+    } else {
+      element.style.display = 'none';
+     if(indic) { indic.innerHTML = '&#9654;';}
+    }
+    return;
+  }
+  </script>\n";
+
+  }
   
 } else { // no alerts to show
   $alertstring = '';
 }
 
+
 // ---- end of alerts mods---
 
 //---------------------------------------------------------------------------------------------
 // finish HTML assembly for the page (detail text forecast)
-$textfcsthead = $ECHEAD;
-// assemble the text forecast as a definition list
-$textforecast = '<div class="ECforecast"><h2>'.$textfcsthead.'</h2>'."\n<h3>$title ($updated)</h3>\n<dl>\n";
+if(isset($forecastdays) and count($forecastdays) > 0){
+  $textfcsthead = $ECHEAD;
+  // assemble the text forecast as a definition list
+  $textforecast = '<div class="ECforecast"><h2>'.$textfcsthead.'</h2>'."\n<h3>$title ($updated)</h3>\n<dl>\n";
 
-if($doDebug) {
-	$Status .= "<!-- forecastdays\n".print_r($forecastdays,true)." -->\n";
-	$Status .= "<!-- forecastdetail\n".print_r($forecastdetail,true)." -->\n";
-}
+  if($doDebug) {
+    $Status .= "<!-- forecastdays\n".print_r($forecastdays,true)." -->\n";
+    $Status .= "<!-- forecastdetail\n".print_r($forecastdetail,true)." -->\n";
+  }
 
-for ($g=0;$g < count($forecastdays);$g++) {
-   $textforecast .= "  <dt><b>" . $forecastdays[$g] ."</b></dt>\n";
-   $textforecast .= "  <dd>" . $forecastdetail[$g] . "</dd>\n";
-}
-$textforecast .= "</dl>\n";
-$textforecast .= "</div>\n";
+  for ($g=0;$g < count($forecastdays);$g++) {
+     $textforecast .= "  <dt><b>" . $forecastdays[$g] ."</b></dt>\n";
+     $textforecast .= "  <dd>" . $forecastdetail[$g] . "</dd>\n";
+  }
+  $textforecast .= "</dl>\n";
+  $textforecast .= "</div>\n";
 // ----- end of detail text forecast HTML assembly
+} else {
+  $textforecast = '';
+}
+if(!isset($weather)){$weather = '';}
 
 //---------------------------------------------------------------------------------------------
 // print it out:
 if ($printIt and  ! $doInclude ) {
+  header('Content-type: text/html,charset='.$charsetOutput);
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -1737,6 +1769,9 @@ if ($printIt and  ! $doInclude ) {
 <meta http-equiv="Content-Type" content="text/html; charset=<?php echo $charsetOutput; ?>" />
 <title><?php print "$ECHEAD - $ECNAME"; ?></title>
 <style type="text/css">
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+  }
 /* styling for EC alert boxes */ 
 .ECwarning a:link,
 .ECstatement a:link,
@@ -1774,6 +1809,7 @@ abbr[title]{cursor:help;}
 <body>
 <?php 
 }
+
 if ($printIt) {
   $ECURL = preg_replace('|&|Ui','and',$ECURL); // make link XHTML compatible
   print $Status;
@@ -1797,7 +1833,7 @@ if ($printIt) {
 		print $forecast24h;
 	  print "</td></tr></table>\n";
 	}
-  print "<p><a $LINKtarget href=\"$ECURL\">$ECNAME</a></p>\n";
+  print "<p><a $LINKtarget href=\"$PAGEURL\">$ECNAME</a></p>\n";
 }
 if ($printIt  and ! $doInclude ) {?>
 </body>
@@ -1807,7 +1843,61 @@ if ($printIt  and ! $doInclude ) {?>
 // --------- end of main program --------------
 
 // ----------------------------functions ----------------------------------- 
-    
+
+//---------------------------------------------------------------------------------------------
+// function to format the alert for printing
+
+function format_alert($A,$n) {
+  global $ecAlertFontSize, $doIconv, $charsetInput, $charsetOutput;
+
+  static $alertstyles = array(
+    'warning' => 'color: white; background-color: #b00; border: 2px solid black;',
+    'watch'   => 'color: black; background-color: #ff0; border: 2px solid black;',
+	'statement' => 'color: white; background-color: #707070; border: 2px solid black;',
+    'ended'   => 'color: white; background-color: #6c6; border: 2px solid black;',
+    'noalert' => 'color: black; background-color: #fff; border: 2px solid black;',
+   'advisory' => 'color: white; background-color: #707070; border: 2px solid black;',
+  );
+  $alertstring = '';
+  $atype = $A['type'];
+  $ID = "alert_$n";
+  $IDI = "alert_$n".'_I';
+  if($A['status'] == 'ended') {return($alertstring);}
+  $alertstring .= '<table class="ECforecast EC'.$atype.'" style="'.$alertstyles[$atype].' padding: 5px;width:100%;border:none;margin-top:5px;">'."\n";
+  $alertstring .= "<tr><td style=\"text-align:center !important;font-size:$ecAlertFontSize;width:25px;cursor:help;\"><span onclick=\"toggle_view('$ID');\">&#9888;</span></td>";
+  $alertstring .= "<td style=\"text-align: center;font-size:$ecAlertFontSize;font-weight:bold;text-decoration-line: underline;\"><span onclick=\"toggle_view('$ID');\">";
+  $aHead = $A['alertBannerText'];
+  if($doIconv) {
+    $aHead = iconv($charsetInput,$charsetOutput."//TRANSLIT",$aHead);
+  }
+  $alertstring .= "<span style=\"cursor:help;\">".$aHead."</span>";
+  $alertstring .= "</span></td>\n";
+  $alertstring .= "<td style=\"text-align:center !important;font-size:$ecAlertFontSize;font-weight:bold;width:25px;cursor:help;\"><span onclick=\"toggle_view('$ID');\" id=\"$IDI\">&#9654;</span></td></tr>\n</table>\n";
+
+
+  # assemble details panel
+  $tText = $A['issueTimeText']."\n\n";
+  $tText .= "<strong>".$A['alertHeaderText']."</strong>";
+  $tText .= "<ul>";
+  foreach ($A['zones'] as $k => $tZone) {
+    $tText .= "<li>$tZone</li>";
+  }
+  $tText .= "</ul>";
+  $tText .= $A['text']."\n";
+
+  $tText = str_replace("\n","<br/>\n",$tText);
+  if($doIconv) {
+    $tText = iconv($charsetInput,$charsetOutput."//TRANSLIT",$tText);
+  }
+  $alertstring .= "<div class=\"ECforecast\" id=\"$ID\" style=\"display: none !important;width: 99% !important;\">";
+  $alertstring .= "<div class=\"EC$atype ECforecast\" style=\"padding: 5px;border: black solid 1px;border-top: none;\">$tText</div>";
+  $alertstring .= "</div>\n";
+  $alertstring .= "<!-- finished for type='$atype' alerts -->\n";
+  return ($alertstring); 
+}
+
+//---------------------------------------------------------------------------------------------
+
 function ECF_replace_icon($icon,$pop) {
 // now replace icon with spiffy updated icons with embedded PoP to
 //    spruce up the dull ones from www.weatheroffice.ec.gc.ca 
@@ -1925,9 +2015,9 @@ Array
   //$Status .= "<!-- curl info\n".print_r($cinfo,true)." -->\n";
   curl_close($ch);                                              // close the cURL session
   //$Status .= "<!-- raw data\n".$data."\n -->\n"; 
-  $i = strpos($data,"\r\n\r\n");
-  $headers = substr($data,0,$i);
-  $content = substr($data,$i+4);
+  $stuff = explode("\r\n\r\n",$data); // maybe we have more than one header due to redirects.
+  $content = (string)array_pop($stuff); // last one is the content
+  $headers = (string)array_pop($stuff); // next-to-last-one is the headers
   if($cinfo['http_code'] <> 200) {
     $Status .= "<!-- headers:\n".$headers."\n -->\n"; 
   }
@@ -1988,56 +2078,6 @@ function ECF_fetch_microtime()
 
 //---------------------------------------------------------------------------------------------
 
-function ECF_XML_URL_info($ECurl) {
-/*
-  Function to change a http://weather.gc.ca/city/pages/... URL to the corresponding
-	http://dd.weather.gc.ca/citypage_weather/xml/... URL for retrieval of the
-	XML forecast desired.  Uses the $EClookup table for the conversion of page-id
-	to XML base filename.
-	
-	Returns: array(
-	  XML URL or false if requested page-id is not found
-		pgcode (on-15, etc)
-		lang   ( 'e' or 'f')
-		units  ( 'metric' or 'imperial')
-		XML file ('sNNNNNNN' or '' if not found)
-	
-	Author: Ken True - 18-Sep-2017 - saratoga-weather.org
-*/
-	global $EClookup;
-	
-	$urlparts = parse_url($ECurl);
-	$pathinfo = pathinfo($urlparts['path']);
-	list($pgcode,$unit,$lang) = explode('_',$pathinfo['filename']);
-	list($prov,$numb) = explode('-',$pgcode);
-	$PROV = strtoupper($prov);
-	
-	if(isset($EClookup[$pgcode])) {
-		list($Xprov,$Xfile,$XnameE,$XnameF,$Xlat,$Xlon) = explode("|",$EClookup[$pgcode]);
-		
-		return( 
-		  array(
-		    "https://dd.weather.gc.ca/citypage_weather/xml/$PROV/{$Xfile}_$lang.xml",
-				$pgcode,
-				$lang,
-				$unit,
-				$Xfile
-			)
-			);
-	} else {
-		return (array(
-		  false,
-			$pgcode,
-			$lang,
-			$unit,
-			''
-			)
-		);
-	}
-}
-
-//---------------------------------------------------------------------------------------------
-
 function ECF_get_time ($utcstring,$utcoffset) {
 	// convert the YYYYDDMMHHmmss to ISO UTC format for strtotime use
 	global $Status, $doDebug;
@@ -2060,6 +2100,7 @@ function ECF_UTF_CLEANUP ($str) {
 // Clean embedded ISO-8859-1 characters with UTF-8 replacements so iconv can work.
 // EC is a bit lazy about mixing character sets in descriptions.
   global $trantab;
+  return($str); # temp disable this function
   $cstr = str_replace(
 		// ISO-8859-1 characters
 		$trantab['ISO'],
