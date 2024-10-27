@@ -65,6 +65,9 @@ Version 4.02 now uses cURL functions and uses HTTPS to access the EC website.
 
 Version 5.00 is a major rewrite of the script to use the EC XML data instead of page scraping the EC website. V5.00 includes an Almanac and a 24-hour rolling forecast that can be displayed via new settings (default is to display both). The XML parsing should insulate us from further tweaks with the EC website page design as the XML format is unchanged for many years.
 
+Version 6.00 is a major rewrite of the script to use EC JSON data from the new EC website design.  The script accomodates either old format or new format URLs for forecast selection.
+All new forecast site selections need to use the new URL format with latitude,longitude.
+
 Using it on a PHP page:
 
 ```
@@ -102,7 +105,7 @@ Also returned are these useful variables filled in:
 
 ```$textforecast``` = fully formed <div> with text forecast as <dl>
 
-```$alertstring``` = styled box with hotlinks to advisories/warnings
+```$alertstring``` = styled HTML to display bars with dropdown details for active advisories/warnings
 
 ```$currentConditions``` = table with current conditions at EC forecast site
 
@@ -132,5 +135,7 @@ Normals: Max 16°C Min 5°C
 ```
 
 # Sample of the output for lang=fr (French):
+![V6 French Sample](https://github.com/user-attachments/assets/14804896-528d-4615-806e-2e34ce1f11a8)
 
-<img src="./sample-french-output.png" alt="Sample Output" style="border: 1px black solid;">
+# Sample expanded alert for lang=fr (French):
+![V6 expanded alert](https://github.com/user-attachments/assets/ac4944b9-3401-44cf-846b-11995bd572df)
