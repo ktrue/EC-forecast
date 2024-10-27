@@ -46,8 +46,9 @@
 // Version 5.06 - 18-May-2023 - added 'advisory' alert display same as 'statement' type
 // Version 5.07 - 02-Jul-2024 - fixes for changes in EC XML returns w/o almanac section
 // Version 6.00 - 26-Oct-2024 - rewrite to use new EC JSON return instead of XML citypage
+// Version 6.01 - 26-Oct-2024 - fix for hourly display icons when using .png icons
 //
-  $Version = "V6.00 - 26-Oct-2024";
+  $Version = "V6.01 - 26-Oct-2024";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -1902,7 +1903,8 @@ function ECF_replace_icon($icon,$pop) {
 // now replace icon with spiffy updated icons with embedded PoP to
 //    spruce up the dull ones from www.weatheroffice.ec.gc.ca 
   global $imagedirEC,$iconTypeEC;
-	$curicon = str_replace('.gif','',$icon);
+  $curicon = str_replace('.gif','',$icon);
+  $curicon = str_replace('.png','',$curicon);
   if ($pop > 0) {
 	  $testicon = $curicon."p$pop$iconTypeEC";
 	  if (file_exists("$imagedirEC/$testicon")) {
