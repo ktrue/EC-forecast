@@ -47,8 +47,9 @@
 // Version 5.07 - 02-Jul-2024 - fixes for changes in EC XML returns w/o almanac section
 // Version 6.00 - 26-Oct-2024 - rewrite to use new EC JSON return instead of XML citypage
 // Version 6.01 - 26-Oct-2024 - fix for hourly display icons when using .png icons
+// Version 6.02 - 28-Oct-2024 - fixed alert display when there are highway alerts
 //
-  $Version = "V6.01 - 26-Oct-2024";
+  $Version = "V6.02 - 28-Oct-2024";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -1696,14 +1697,14 @@ if (isset($JSON['alert']['zoneId'])) { // create the $alertstring HTML if there 
   $XA = isset($JSON['alert']['alerts'])?$JSON['alert']['alerts']:array();
   $n = 0;
   $ecAlertFontSize = '130%';
-	foreach ($XA as $n => $A) { 
-    $alertstring .= format_alert($A,$n);
+	foreach ($XA as $i => $A) { 
+    $alertstring .= format_alert($A,$n,'weather');
     $n++;
 	}
    
   $XA = isset($JSON['alert']['hwyAlerts'])?$JSON['alert']['hwyAlerts']:array();
-	foreach ($XA as $n => $A) { 
-    $alertstring .= format_alert($A,$n);
+	foreach ($XA as $i => $A) { 
+    $alertstring .= format_alert($A,$n,'highway');
     $n++;
 	}
   
@@ -1724,8 +1725,8 @@ if (isset($JSON['alert']['zoneId'])) { // create the $alertstring HTML if there 
     }
     return;
   }
-  </script>\n";
-
+  </script>
+  ";
   }
   
 } else { // no alerts to show
@@ -1848,7 +1849,7 @@ if ($printIt  and ! $doInclude ) {?>
 //---------------------------------------------------------------------------------------------
 // function to format the alert for printing
 
-function format_alert($A,$n) {
+function format_alert($A,$n,$wType) {
   global $ecAlertFontSize, $doIconv, $charsetInput, $charsetOutput;
 
   static $alertstyles = array(
@@ -1859,15 +1860,23 @@ function format_alert($A,$n) {
     'noalert' => 'color: black; background-color: #fff; border: 2px solid black;',
    'advisory' => 'color: white; background-color: #707070; border: 2px solid black;',
   );
-  $alertstring = '';
+ $wIcon = ($wType == 'highway')?'&#9951;':'&#9888;';  #9951, #128664
+ $alertstring = '';
   $atype = $A['type'];
   $ID = "alert_$n";
   $IDI = "alert_$n".'_I';
   if($A['status'] == 'ended') {return($alertstring);}
   $alertstring .= '<table class="ECforecast EC'.$atype.'" style="'.$alertstyles[$atype].' padding: 5px;width:100%;border:none;margin-top:5px;">'."\n";
-  $alertstring .= "<tr><td style=\"text-align:center !important;font-size:$ecAlertFontSize;width:25px;cursor:help;\"><span onclick=\"toggle_view('$ID');\">&#9888;</span></td>";
+  $alertstring .= "<tr><td style=\"text-align:center !important;font-size:$ecAlertFontSize;width:25px;cursor:help;\"><span onclick=\"toggle_view('$ID');\">$wIcon</span></td>";
   $alertstring .= "<td style=\"text-align: center;font-size:$ecAlertFontSize;font-weight:bold;text-decoration-line: underline;\"><span onclick=\"toggle_view('$ID');\">";
   $aHead = $A['alertBannerText'];
+  if($wType == 'highway') {
+    $tZoneNames = '';
+    foreach($A['zones'] as $k => $t) {
+      $tZoneNames = $t."<br/>";
+    }
+    $aHead = $tZoneNames . $aHead;
+  }
   if($doIconv) {
     $aHead = iconv($charsetInput,$charsetOutput."//TRANSLIT",$aHead);
   }
