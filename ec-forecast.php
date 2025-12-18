@@ -48,8 +48,9 @@
 // Version 6.00 - 26-Oct-2024 - rewrite to use new EC JSON return instead of XML citypage
 // Version 6.01 - 26-Oct-2024 - fix for hourly display icons when using .png icons
 // Version 6.02 - 28-Oct-2024 - fixed alert display when there are highway alerts
+// Version 7.00 - 18-Dec-2025 - major update to support color-coded alerts from EC
 //
-  $Version = "V6.02 - 28-Oct-2024";
+  $Version = "V7.00 - 18-Dec-2025";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -122,9 +123,11 @@ $ECforecasts = array(
   'St. John\'s, NL new|https://meteo.gc.ca/fr/location/index.html?coords=47.558,-52.717',
   'Victoria, BC new|https://weather.gc.ca/en/location/index.html?coords=48.433,-123.362',
   'Vancouver, BC new|https://weather.gc.ca/en/location/index.html?coords=49.245,-123.115',
-  'Lakes District, BC new|https://weather.gc.ca/en/location/index.html?coords=53.8176,-125.8463',
-  'Herschel Island, YT new|https://weather.gc.ca/en/location/index.html?coords=69.590,-139.099',
-  'Burgeo - Ramea, NL new|https://meteo.gc.ca/fr/location/index.html?coords=47.9085,-57.4089',
+  'Regina, SK|https://weather.gc.ca/en/location/index.html?coords=50.450,-104.617',
+  'Lethbridge, AB|https://weather.gc.ca/en/location/index.html?coords=49.693,-112.835',
+  'Merritt, BC|https://weather.gc.ca/en/location/index.html?coords=50.111,-120.790',
+  'Val-d\'Or, QC|https://weather.gc.ca/en/location/index.html?coords=48.105,-77.796',
+  'Boissevain, MB|https://weather.gc.ca/en/location/index.html?coords=49.231,-100.055',
 ); 
 //*/
 // end of new settings with V2.16 ------
@@ -454,13 +457,13 @@ function gen_ecurl($URL) {
     $cache = $cacheFileDir.'ecforecast-'.str_replace('.','_',$latlon)."-$Lang.json";
    
     if($Lang == 'fr') {
-      $ECURL = "https://meteo.gc.ca/api/app/fr/Location/$latlon?type=city";
+      $ECURL = "https://meteo.gc.ca/api/app/v3/fr/Location/$latlon?type=city";
       $PGURL = "https://meteo.gc.ca/fr/location/index.html?coords=$latlon";
       $Status .= "<!-- using $ECURL for French forecast -->\n";
       $Status .= "<!-- using $PGURL for page -->\n";
     }
     if($Lang == 'en') {
-     $ECURL = "https://weather.gc.ca/api/app/en/Location/$latlon?type=city";
+     $ECURL = "https://weather.gc.ca/api/app/v3/en/Location/$latlon?type=city";
      $PGURL = "https://weather.gc.ca/en/location/index.html?coords=$latlon";
      $Status .= "<!-- using $ECURL for English forecast -->\n";
      $Status .= "<!-- using $PGURL for page -->\n";
@@ -480,13 +483,13 @@ function gen_ecurl($URL) {
     $cache = $cacheFileDir.'ecforecast-'.str_replace('.','_',$latlon)."-$Lang.json";
    
     if($Lang == 'fr') {
-      $ECURL = "https://meteo.gc.ca/api/app/fr/Location/$latlon?type=city";
+      $ECURL = "https://meteo.gc.ca/api/app/v3/fr/Location/$latlon?type=city";
       $PGURL = "https://meteo.gc.ca/fr/location/index.html?coords=$latlon";
       $Status .= "<!-- using $ECURL for French forecast -->\n";
       $Status .= "<!-- using $PGURL for page -->\n";
     }
     if($Lang == 'en') {
-     $ECURL = "https://weather.gc.ca/api/app/en/Location/$latlon?type=city";
+     $ECURL = "https://weather.gc.ca/api/app/v3/en/Location/$latlon?type=city";
      $PGURL = "https://weather.gc.ca/en/location/index.html?coords=$latlon";
      $Status .= "<!-- using $ECURL for English forecast -->\n";
      $Status .= "<!-- using $PGURL for page -->\n";
@@ -630,6 +633,9 @@ $LegendsLang = array(
     '&nbsp;&nbsp;Medium: 60% or 70%<br/>' .
     '&nbsp;&nbsp;High: Above 70%<br/>',
   'nonsig' => '&Dagger; Value not significant ',
+  'impact' => 'Impact Level: ',
+  'confidence' => 'Forecast Confidence: ',
+  'effectivefor' => 'In effect for:'
   ),
 'fr'=> array(
   // French
@@ -688,6 +694,10 @@ $LegendsLang = array(
     '&nbsp;&nbsp;Moyenne: 60% ou 70%<br/>' .
     '&nbsp;&nbsp;Élevée : 80% et plus<br/>',
   'nonsig' => '&Dagger; Valeur non significative',
+  'impact' => 'Niveau d\'impact: ',
+  'confidence' => 'Confiance dans les prévisions: ',
+  'effectivefor' => 'En vigueur pour:',
+
   )
 );
 
@@ -1531,34 +1541,29 @@ if (count($forecasticon) > 0) {
 
 /* note: finish styling of alert links in your .css by adding:
  
-.ECwarning a:link,
-.ECstatement a:link,
-.ECended a:link,
-.ECended a:visited
-{
-	color:white !important;
-}
-.ECwarning a:hover,
-.ECended a:hover {
-	color:black !important;
-}
+.ECred a:link,
+.ECred a:visited,
+.ECred a:hover,
+.ECgrey a:link,
+.ECgrey a:visited,
+.ECgrey a:hover,
 
-.ECwarning a:visited,
-.ECstatement a:visited
 {
 	color:white !important;
 }
 
-.ECwatch a:link,
-.ECwatch a:visited
+.ECyellow a:link,
+.ECyellow a:visited,
+.ECyellow a:hover,
+.ECorange a:link,
+.ECorange a:visited,
+.ECorange a:hover,
+ {
 {
 	color:black !important;
 }
 
-.ECstatement a:hover,
-.ECwatch a:hover {
-	color:red !important;
-}
+abbr[title]{cursor:help;}
 */
 
 //---------------------------------------------------------------------------------------------
@@ -1567,130 +1572,8 @@ if (count($forecasticon) > 0) {
 if (isset($JSON['alert']['zoneId'])) { // create the $alertstring HTML if there are alert(s)
   
   /*
-        "alerts": [
-        {
-          "type": "warning",
-          "sequence": 0,
-          "status": "active",
-          "transitionStatus": "continued",
-          "issueTime": "2024-10-19T12:05:50.504Z",
-          "timezone": "PDT",
-          "issueTimeText": "5:05 a.m. PDT Saturday 19 October 2024",
-          "issuingOfficeTZ": "PDT",
-          "expiryTime": "2024-10-20T04:05:50.504Z",
-          "eventOnsetTime": "2024-10-19T11:50:00.000Z",
-          "eventEndTime": "2024-10-20T23:40:00.000Z",
-          "alertId": "1956382241999583092202410170502",
-          "alertCode": "RFW",
-          "program": "public",
-          "alertBannerText": "Rainfall Warning",
-          "alertHeaderText": "Rainfall Warning in effect for:",
-          "bannerColour": "#b40000",
-          "zoneId": "loc1-2573",
-          "zones": [
-            "Metro Vancouver - central including the City of Vancouver Burnaby and New Westminster"
-          ],
-          "text": "Heavy rain continues for most of the weekend.\n\nWhere: Metro Vancouver, western and central Fraser Valley, Howe Sound, and Whistler.\n\nWhen: Now to Sunday.  \n\nWhat: Storm totals of 90 to 150 mm are expected in Metro Vancouver and parts of the Fraser Valley, with higher amounts potentially exceeding 180 mm over the North Shore Mountains. In the Sea-to-Sky corridor, totals of 90 to 150 mm are possible.\n\nHazards: \n- Water pooling on roads \n- Swollen rivers and creeks \n- Minor coastal flooding  \n\nRemarks: A strong fall storm system will direct an atmospheric river towards the South Coast, bringing heavy rain to the region. The heavy rain will continue today, then ease somewhat tonight. A second pulse of rain is expected Sunday before the rain ends late Sunday.\n\nEnsure that drains are clear of leaves and debris and secure loose objects out-of-doors.\n\nKeep up to date with the latest advisories from the River Forecast Centre at: \nhttps://bcrfc.env.gov.bc.ca/warnings/index.htm\n\nHeavy downpours can cause flash floods and water pooling on roads. Localized flooding in low-lying areas is possible.\n\nIf visibility is reduced while driving, turn on your lights and maintain a safe following distance.\n\nPlease continue to monitor alerts and forecasts issued by Environment Canada. To report severe weather, send an email to BCstorm@ec.gc.ca or tweet reports using #BCStorm.",
-          "special_text": [
-            {
-              "type": "email",
-              "link": "BCstorm@ec.gc.ca"
-            },
-            {
-              "type": "hashtag",
-              "link": "#BCStorm",
-              "alias": "#BCStorm "
-            }
-          ],
-          "tcisURL": ""
-        }
-      ],
-      "hwyAlerts": [
-        {
-          "type": "warning",
-          "sequence": 0,
-          "status": "active",
-          "transitionStatus": "continued",
-          "issueTime": "2024-10-19T12:05:50.504Z",
-          "timezone": "PDT",
-          "issueTimeText": "5:05 a.m. PDT Saturday 19 October 2024",
-          "issuingOfficeTZ": "PDT",
-          "expiryTime": "2024-10-20T04:05:50.504Z",
-          "eventOnsetTime": "2024-10-19T11:50:00.000Z",
-          "eventEndTime": "2024-10-20T23:40:00.000Z",
-          "alertId": "1956382241999583092202410170502",
-          "alertCode": "RFW",
-          "program": "public",
-          "alertBannerText": "Rainfall Warning",
-          "alertHeaderText": "Rainfall Warning in effect for:",
-          "bannerColour": "#b40000",
-          "zoneId": "loc1-2522",
-          "zones": [
-            "Sea to Sky - Squamish to Whistler"
-          ],
-          "text": "stuff...",
-          "special_text": [
-            {
-              "type": "URL",
-              "link": "https://www.drivebc.ca/",
-              "alias": "drivebc.ca"
-            },
-            {
-              "type": "email",
-              "link": "BCstorm@ec.gc.ca"
-            },
-            {
-              "type": "hashtag",
-              "link": "#BCStorm",
-              "alias": "#BCStorm "
-            }
-          ],
-          "tcisURL": ""
-        },
-        {
-          "type": "statement",
-          "sequence": 1,
-          "status": "active",
-          "transitionStatus": "continued",
-          "issueTime": "2024-10-19T12:29:08.953Z",
-          "timezone": "PDT",
-          "issueTimeText": "5:29 a.m. PDT Saturday 19 October 2024",
-          "issuingOfficeTZ": "PDT",
-          "expiryTime": "2024-10-20T04:29:08.953Z",
-          "eventOnsetTime": "2024-10-19T11:50:00.000Z",
-          "eventEndTime": "2024-10-20T18:22:00.000Z",
-          "alertId": "1658233371150208147202410160502",
-          "alertCode": "SPS",
-          "program": "public",
-          "alertBannerText": "Special Weather Statement",
-          "alertHeaderText": "Special Weather Statement in effect for:",
-          "bannerColour": "#707070",
-          "zoneId": "loc1-2517",
-          "zones": [
-            "Coquihalla Highway - Hope to Merritt"
-          ],
-          "text": "stuff...",
-          "special_text": [
-            {
-              "type": "URL",
-              "link": "https://www.drivebc.ca/",
-              "alias": "drivebc.ca"
-            },
-            {
-              "type": "email",
-              "link": "BCstorm@ec.gc.ca"
-            },
-            {
-              "type": "hashtag",
-              "link": "#BCStorm",
-              "alias": "#BCStorm "
-            }
-          ],
-          "tcisURL": ""
-        }
-      ]
-    },
-*/
+ 
+ */
 
   $alertstring = '';
   // group alerts by type and add to $alertstring
@@ -1774,37 +1657,29 @@ if ($printIt and  ! $doInclude ) {
   body {
     font-family: Arial, Helvetica, sans-serif;
   }
-/* styling for EC alert boxes */ 
-.ECwarning a:link,
-.ECstatement a:link,
-.ECadvisory a:link,
-.ECended a:link,
-.ECended a:visited
-{
-	color:white !important;
-}
-.ECwarning a:hover,
-.ECended a:hover {
-	color:black !important;
-}
+/* styling for links in EC alert boxes  V7.00 */ 
+.ECred a:link,
+.ECred a:visited,
+.ECred a:hover,
+.ECgrey a:link,
+.ECgrey a:visited,
+.ECgrey a:hover,
 
-.ECwarning a:visited,
-.ECstatement a:visited,
-.ECadvisory a:visited
 {
 	color:white !important;
 }
 
-.ECwatch a:link,
-.ECwatch a:visited
+.ECyellow a:link,
+.ECyellow a:visited,
+.ECyellow a:hover,
+.ECorange a:link,
+.ECorange a:visited,
+.ECorange a:hover,
+ {
 {
 	color:black !important;
 }
 
-.ECstatement a:hover,
-.ECwatch a:hover {
-	color:red !important;
-}
 abbr[title]{cursor:help;}
 </style>
 </head>
@@ -1850,26 +1725,34 @@ if ($printIt  and ! $doInclude ) {?>
 // function to format the alert for printing
 
 function format_alert($A,$n,$wType) {
-  global $ecAlertFontSize, $doIconv, $charsetInput, $charsetOutput;
+  global $ecAlertFontSize, $doIconv, $charsetInput, $charsetOutput,$Legends;
 
   static $alertstyles = array(
-    'warning' => 'color: white; background-color: #b00; border: 2px solid black;',
-    'watch'   => 'color: black; background-color: #ff0; border: 2px solid black;',
-	'statement' => 'color: white; background-color: #707070; border: 2px solid black;',
-    'ended'   => 'color: white; background-color: #6c6; border: 2px solid black;',
-    'noalert' => 'color: black; background-color: #fff; border: 2px solid black;',
-   'advisory' => 'color: white; background-color: #707070; border: 2px solid black;',
+     'red' => 'color: white; background-color: #DI0000; border: 2px solid black;',
+    'orange'   => 'color: black; background-color: #ff9500; border: 2px solid black;',
+	  'yellow' => 'color: black; background-color: #FFFF00; border: 2px solid black;',
+    'grey'   => 'color: white; background-color: #656565; border: 2px solid black;',
+    
   );
- $wIcon = ($wType == 'highway')?'&#9951;':'&#9888;';  #9951, #128664
+ $wIcon = ($A['program'] == 'highway')?'&#9951;':'&#9888;';  #9951, #128664
  $alertstring = '';
-  $atype = $A['type'];
+  $atype = $A['colour'];
   $ID = "alert_$n";
   $IDI = "alert_$n".'_I';
   if($A['status'] == 'ended') {return($alertstring);}
   $alertstring .= '<table class="ECforecast EC'.$atype.'" style="'.$alertstyles[$atype].' padding: 5px;width:100%;border:none;margin-top:5px;">'."\n";
   $alertstring .= "<tr><td style=\"text-align:center !important;font-size:$ecAlertFontSize;width:25px;cursor:help;\"><span onclick=\"toggle_view('$ID');\">$wIcon</span></td>";
+  $tLoc = '';
+  if($A['program'] == 'highway' and isset($A['refLocs']) and is_array($A['refLocs'])) {
+      
+     foreach ($A['refLocs'] as $key => $val) {
+       $tLoc .= $A['refLocs'][$key]['name']."<br/>";
+     }
+    
+  }
   $alertstring .= "<td style=\"text-align: center;font-size:$ecAlertFontSize;font-weight:bold;text-decoration-line: underline;\"><span onclick=\"toggle_view('$ID');\">";
-  $aHead = $A['alertBannerText'];
+  $aHead = $tLoc.$A['bannerText'];
+  /*
   if($wType == 'highway') {
     $tZoneNames = '';
     foreach($A['zones'] as $k => $t) {
@@ -1877,6 +1760,7 @@ function format_alert($A,$n,$wType) {
     }
     $aHead = $tZoneNames . $aHead;
   }
+  */
   if($doIconv) {
     $aHead = iconv($charsetInput,$charsetOutput."//TRANSLIT",$aHead);
   }
@@ -1887,13 +1771,27 @@ function format_alert($A,$n,$wType) {
 
   # assemble details panel
   $tText = $A['issueTimeText']."\n\n";
-  $tText .= "<strong>".$A['alertHeaderText']."</strong>";
+  #$tText .= "<strong>".$A['alertHeaderText']."</strong>";
+  /*
   $tText .= "<ul>";
   foreach ($A['zones'] as $k => $tZone) {
     $tText .= "<li>$tZone</li>";
   }
   $tText .= "</ul>";
+  */
+  if(isset($A['impact'])) {$tText .= $Legends['impact'].$A['impact']."\n\n";}
+  if(isset($A['confidence'])) {$tText .= $Legends['confidence'].$A['confidence']."\n\n\n";}
   $tText .= $A['text']."\n";
+  
+  if(isset($A['refLocs']) and is_array($A['refLocs'])) {
+     $tText .= "\n<strong>".$Legends['effectivefor']. "</strong><ul>";
+    
+     foreach ($A['refLocs'] as $key => $val) {
+       $tText .= "<li>".$A['refLocs'][$key]['name']."</li>";
+     }
+    
+     $tText .= "</ul>\n";
+  }
 
   $tText = str_replace("\n","<br/>\n",$tText);
   if($doIconv) {
