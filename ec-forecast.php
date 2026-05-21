@@ -49,8 +49,9 @@
 // Version 6.01 - 26-Oct-2024 - fix for hourly display icons when using .png icons
 // Version 6.02 - 28-Oct-2024 - fixed alert display when there are highway alerts
 // Version 7.00 - 18-Dec-2025 - major update to support color-coded alerts from EC
+// Version 7.01 - 21-May-2026 - fixes for PHP 8.5
 //
-  $Version = "V7.00 - 18-Dec-2025";
+  $Version = "V7.01 - 21-May-2026";
 
 // error_reporting(E_ALL); // uncomment for checking errata in code
 //---------------------------------------------------------------------------------------------
@@ -1922,7 +1923,7 @@ Array
     " secs -->\n";
 
   //$Status .= "<!-- curl info\n".print_r($cinfo,true)." -->\n";
-  curl_close($ch);                                              // close the cURL session
+  if(PHP_MAJOR_VERSION < 8) {curl_close($ch); }// close the cURL sessionc
   //$Status .= "<!-- raw data\n".$data."\n -->\n"; 
   $stuff = explode("\r\n\r\n",$data); // maybe we have more than one header due to redirects.
   $content = (string)array_pop($stuff); // last one is the content
